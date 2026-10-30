@@ -1,10 +1,15 @@
-# Tự đóng gói bản exe portable mỗi khi tạo Release (tag VD: v6.1) trên GitHub.
+# Tự đóng gói bản exe portable mỗi khi có tag phiên bản (VD: v6.1) hoặc tạo Release trên GitHub.
 # Tool bấm "Cập nhật" sẽ tải file FshareAutoDownload_Portable.zip (bản exe)
 # hoặc FshareAutoDownload_vX.Y.zip (bản chạy bằng Python) từ bản phát hành mới nhất.
 name: Build release
 on:
+  push:
+    tags: ["v*"]
   release:
     types: [published]
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
 permissions:
   contents: write
 jobs:
@@ -31,6 +36,8 @@ jobs:
           Compress-Archive -Force FshareAutoDownload "FshareAutoDownload_$v.zip"
       - uses: softprops/action-gh-release@v2
         with:
+          name: Fshare Auto Download ${{ github.ref_name }}
+          body: "Bản exe: FshareAutoDownload_Portable.zip · Bản Python: FshareAutoDownload_${{ github.ref_name }}.zip · Thay đổi: xem CHANGELOG.txt"
           files: |
             FshareAutoDownload_Portable.zip
             FshareAutoDownload_${{ github.ref_name }}.zip
