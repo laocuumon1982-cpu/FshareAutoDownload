@@ -1,4 +1,4 @@
-FSHARE AUTO DOWNLOAD v6.1 by Duy Anh - HƯỚNG DẪN
+FSHARE AUTO DOWNLOAD v6.2 by Duy Anh - HƯỚNG DẪN
 (Có gì mới ở từng phiên bản: xem CHANGELOG.txt)
 =================================================
 
@@ -25,7 +25,7 @@ BẢN PORTABLE (.exe) - CHẠY TỪ Ổ CỨNG DI ĐỘNG (v5.3)
 
 NHIỀU MÁY (Ở NHÀ / CHỖ LÀM) - HỒ SƠ THEO MÁY
    Mỗi máy tự nhớ đường dẫn riêng: Firefox, thư mục IDM lưu phim, thư mục phim (HDD), rclone.exe,
-   thư mục gốc PikPak, cổng web... Cắm ổ vào máy nào, tool tự dùng đúng thiết lập của máy đó.
+   thư mục gốc PikPak... Cắm ổ vào máy nào, tool tự dùng đúng thiết lập của máy đó.
    - Máy mới lần đầu: tool tự chép thiết lập từ máy dùng gần nhất, tự dò lại Firefox / IDM / rclone,
      rồi hỏi có mở Cài đặt để kiểm tra không -> sửa đường dẫn cho đúng máy này -> "Lưu cài đặt".
    - Đường dẫn nằm trên chính ổ di động được lưu không phụ thuộc ký tự ổ (ổ là E: ở nhà, F: ở chỗ làm vẫn đúng).
@@ -45,10 +45,6 @@ TÀI KHOẢN PIKPAK - TỰ ĐĂNG NHẬP
      thanh bên trái, mục KẾT NỐI:  ✔ đã kết nối (xanh) / ⚠ lỗi (đỏ) / chưa đăng nhập. Bấm vào để mở cài đặt.
    - Mật khẩu được mã hóa nhẹ trong config.json (không phải mã hóa mạnh) -> đừng chia sẻ file này.
 
-IPHONE KHÔNG MỞ ĐƯỢC WEB (v6.1): lần đầu mở tool sẽ hỏi "Cho phép iPhone / máy khác..." -> Có -> Windows hỏi
-   quyền Admin -> Yes. Tool xóa luật CHẶN cũ (do lỡ bấm Cancel ở hộp thoại Allow của Windows) và thêm luật cho phép.
-   Làm lại bất cứ lúc nào: Cài đặt -> Tự động & Web -> "Cho phép qua tường lửa Windows".
-
 TÙY CHỈNH GIAO DIỆN (v6.1): kéo mép phải thanh bên trái để đổi độ rộng (nhấp đúp = thu gọn); kéo vạch giữa
    tiêu đề các cột (Thư mục, Ghi chú, Tên file, Ngày up, Dung lượng, Trạng thái) để đổi độ rộng cột.
    Tool tự nhớ khi tắt.
@@ -59,7 +55,7 @@ NÚT CẬP NHẬT (v6.0): nút "⟳ Cập nhật" góc trên bên phải.
    - Cập nhật qua GitHub (tự báo khi có bản mới): xem HUONG_DAN_CAP_NHAT.txt.
 
 THƯ MỤC CON CÓ LINK (v6.0): thẻ thư mục ở tab Thư mục Fshare có mục "Thư mục con (N)" -> bấm để xem link
-   từng thư mục con. Bấm link: mở trên Firefox · chuột phải: copy link. Trên web / iPhone cũng có.
+   từng thư mục con. Bấm link: mở trên Firefox · chuột phải: copy link.
 
 THƯ MỤC DATA (v5.9) - LÊN BẢN MỚI:
    Toàn bộ dữ liệu nằm trong thư mục "Data" cạnh tool: config.json (thư mục Fshare, cài đặt), owned.json
@@ -85,7 +81,7 @@ FIREFOX TỰ TẢI, IDM KHÔNG BẮT LINK (v5.6):
 THANH BÊN TRÁI (v5.5): bấm « ở góc trên để thu gọn chỉ còn icon, bấm » để mở lại (phím tắt Ctrl+B).
    Tool nhớ trạng thái thu gọn cho lần mở sau.
 
-CÀI ĐẶT (v5.3) chia 4 mục: Tải về · Lưu trữ & PikPak · Tự động & Web · Máy này & Sao lưu.
+CÀI ĐẶT (v5.3) chia 4 mục: Tải về · Lưu trữ & PikPak · Tự động · Máy này & Sao lưu.
 
 BƯỚC 1 - TAB "THƯ MỤC FSHARE" (làm 1 lần cho mỗi thư mục)
    Bên trái: danh sách thư mục. Bên phải: danh sách file của thư mục đang chọn.
@@ -137,34 +133,6 @@ UPLOAD LÊN PIKPAK (song song, tự động)
    - Upload chạy nền, lần lượt từng file. Cột "PIKPAK" ở tab Lịch sử: Chờ upload / ↑ 45% / Đã lên PikPak / Lỗi.
    - Upload lỗi hoặc file cũ: chọn ở tab Lịch sử -> "⇪ Upload lên PikPak". Tắt tool giữa chừng:
      lần mở sau tự upload tiếp. Lọc "Lỗi upload" để xem file chưa lên được.
-
-GIAO DIỆN WEB - ĐIỀU KHIỂN TỪ ĐIỆN THOẠI (v5.0)
-   Tool vẫn chạy trên máy tính (Firefox, IDM, ổ cứng, PikPak như cũ), có thêm trang web để điều khiển.
-   Trên trang web: Quét / Quét & Tải / Dừng, bật tắt tự quét, chọn file để tải hoặc đánh dấu đã có,
-   thêm / sửa / xóa thư mục, "Quét file" từng thư mục và lưu Danh sách đã có, xem lịch sử, upload PikPak.
-   1. Tab Cài đặt -> "Giao diện web": bật (mặc định bật), cổng 8080, ĐẶT MÃ PIN -> Lưu cài đặt.
-   2. Lần đầu Windows hỏi tường lửa (Windows Firewall) -> chọn "Allow" cho mạng Private.
-   3. Điện thoại dùng CÙNG Wi-Fi với máy tính -> mở trình duyệt, gõ địa chỉ hiện ở
-      tab Cài đặt / cuối thanh bên trái (VD: http://192.168.1.5:8080) -> nhập mã PIN.
-   4. CÀI NHƯ APP TRÊN IPHONE: mở địa chỉ bằng Safari -> bấm nút Chia sẻ (ô vuông có mũi tên lên)
-      -> "Thêm vào MH chính" -> Thêm.  Biểu tượng "Fshare DL" xuất hiện trên màn hình chính,
-      mở ra toàn màn hình như app thật (thanh tab dưới đáy, tự theo chế độ Sáng / Tối của iPhone).
-      Kéo xuống ở đầu trang để làm mới. Android: Chrome -> menu ⋮ -> "Thêm vào màn hình chính".
-   Lưu ý: máy tính phải bật và tool đang chạy (có thể chạy ẩn dưới khay).
-   Nếu không vào được: kiểm tra cùng Wi-Fi, tường lửa, hoặc đổi cổng khác (VD 8088).
-
-   DÙNG KHI Ở NGOÀI NHÀ (không cùng Wi-Fi) - dùng Tailscale (miễn phí, an toàn):
-   1. Máy tính: tải Tailscale ở https://tailscale.com/download -> cài -> đăng nhập (Google/Microsoft...).
-   2. Điện thoại: cài app Tailscale (App Store / CH Play) -> đăng nhập CÙNG tài khoản -> bật kết nối.
-   3. Trong app Tailscale trên điện thoại, xem địa chỉ của máy tính (dạng 100.x.y.z).
-   4. Mở trình duyệt điện thoại: http://100.x.y.z:8080  (hoặc http://<tên-máy>:8080).
-   Không cần mở cổng modem, chỉ máy của bạn mới vào được.
-
-TIỆN ÍCH FIREFOX (v5.2)
-   Có tiện ích Firefox riêng (file FshareAutoDownload_Firefox_v1.0.zip, xem HUONG_DAN_TIEN_ICH.txt):
-   bấm biểu tượng trên thanh công cụ để xem file mới / quét / tải / đánh dấu đã có, số đỏ báo file mới,
-   thông báo khi có tập mới / tải xong, nút "Thêm vào Fshare Auto Download" ngay trên trang thư mục Fshare.
-   Cần bật "Giao diện web" trong tab Cài đặt của tool.
 
 TAB "LỊCH SỬ TẢI": nhật ký các file đã tải bằng tool (tìm, lọc, sắp xếp).
    "Đánh dấu Xong" = coi như đã tải (cũng thêm vào Danh sách đã có).

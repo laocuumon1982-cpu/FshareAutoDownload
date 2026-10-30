@@ -1,6 +1,10 @@
 FSHARE AUTO DOWNLOAD by Duy Anh - NHẬT KÝ PHIÊN BẢN
 ==================================================
 
+v6.2  (30/10/2026)
+  - Bỏ giao diện web (điện thoại / iPhone / tiện ích Firefox) và tiện ích FshareAutoDownload_Firefox_v1.0:
+    tool không còn mở cổng mạng, không cần cho phép qua tường lửa. Cài đặt mục 3 đổi thành "Tự động".
+
 v6.1  (30/10/2026)
   - iPhone không vào được web: lần đầu mở tool hỏi cho phép như hộp thoại "Allow" của Windows; nút
     "Cho phép qua tường lửa" giờ xóa luật CHẶN cũ (do lỡ bấm Cancel) và thêm luật cho phép theo chương trình + cổng.

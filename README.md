@@ -1,6 +1,6 @@
 # Fshare Auto Download
 
-Tool Windows (Tkinter) quét các thư mục Fshare chứa phim hoạt hình cập nhật hằng ngày, mở tập mới trên Firefox để IDM bắt link và tự bấm "Bắt đầu tải". Tải xong thì copy vào thư mục phim và upload lên PikPak (qua rclone). Có giao diện web cho iPhone.
+Tool Windows (Tkinter) quét các thư mục Fshare chứa phim hoạt hình cập nhật hằng ngày, mở tập mới trên Firefox để IDM bắt link và tự bấm "Bắt đầu tải". Tải xong thì copy vào thư mục phim và upload lên PikPak (qua rclone).
 
 - Chạy bằng Python: `ChayTool.bat` (cài thư viện trước bằng `CaiDat.bat`).
 - Bản exe portable: tải `FshareAutoDownload_Portable.zip` ở mục **Releases**.

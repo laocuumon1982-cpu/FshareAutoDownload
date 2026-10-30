@@ -18,9 +18,7 @@ if not exist "%OUT%" mkdir "%OUT%"
 copy /y "dist\FshareAutoDownload.exe" "%OUT%\" >nul
 copy /y "HUONG_DAN.txt" "%OUT%\" >nul
 copy /y "CHANGELOG.txt" "%OUT%\" >nul
-if exist "HUONG_DAN_TIEN_ICH.txt" copy /y "HUONG_DAN_TIEN_ICH.txt" "%OUT%\" >nul
 if exist "HUONG_DAN_CAP_NHAT.txt" copy /y "HUONG_DAN_CAP_NHAT.txt" "%OUT%\" >nul
-if exist "FshareAutoDownload_Firefox_v1.0.zip" copy /y "FshareAutoDownload_Firefox_v1.0.zip" "%OUT%\" >nul
 rem Chep thu muc Data dang dung (chi chep neu ban portable chua co Data, khong ghi de)
 if not exist "%OUT%\Data" mkdir "%OUT%\Data"
 for %%F in (config.json owned.json history.json rclone.conf) do (

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Fshare Auto Download v6.1 by Duy Anh
+Fshare Auto Download v6.2 by Duy Anh
 - Quét các thư mục Fshare, lấy tập cập nhật trong ngày (hoặc N ngày gần đây)
 - Mở link từng tập mới trên Firefox (đã đăng nhập Fshare VIP) -> IDM bắt link -> tự bấm "Bắt đầu tải"
 - Theo dõi thư mục lưu của IDM, tải xong thì chuyển trạng thái "Đang tải" -> "Xong"
@@ -14,15 +14,12 @@ import os
 import queue
 import re
 import shutil
-import socket
 import subprocess
 import sys
 import threading
 import time
 import unicodedata
-import urllib.parse
 from collections import deque
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import tkinter as tk
@@ -43,7 +40,7 @@ except Exception:
     TRAY_OK = False
 
 APP_TITLE = "Fshare Auto Download"
-APP_VERSION = "v6.1 by Duy Anh"
+APP_VERSION = "v6.2 by Duy Anh"
 APP_NAME = f"{APP_TITLE} {APP_VERSION}"
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 DATA_DIR = BASE / "Data"                # v5.9: mọi dữ liệu nằm trong Data\ -> lên bản mới chỉ cần chép thư mục Data
@@ -77,7 +74,7 @@ BACKUP_FILES = ("config.json", "owned.json", "history.json")
 BACKUP_DIR = "_Backup FshareAutoDownload"
 MACHINE = (os.environ.get("COMPUTERNAME") or "").strip() or __import__("socket").gethostname()
 PATH_KEYS = ("firefox_path", "watch_folders", "library_root")
-MACHINE_KEYS = PATH_KEYS + ("organize", "pikpak_root", "web_on", "web_port", "start_with_windows")
+MACHINE_KEYS = PATH_KEYS + ("organize", "pikpak_root", "start_with_windows")
 LOG_FILE = DATA_DIR / "log.txt"
 
 WEB_FOLDER_API = "https://www.fshare.vn/api/v3/files/folder"
@@ -190,12 +187,9 @@ DEFAULT_CONFIG = {
     "organize": False,
     "library_root": "",
     "check_local": True,
-    "web_on": True,
-    "web_port": 8080,
     "update_repo": "laocuumon1982-cpu/FshareAutoDownload",
     "update_check": True,
     "side_collapsed": False,
-    "web_pin": "",
     "backup_on": True,
     "pikpak_user": "",
     "pikpak_pass": "",
@@ -1139,485 +1133,6 @@ def scan_completed(watch_folders, pending):
 
 
 # ----------------------------------------------------------------- GUI
-# ----------------------------------------------------------------- Máy chủ web (điều khiển từ điện thoại)
-ICON180 = "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"
-ICON512 = "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"
-
-
-class WebServer(ThreadingHTTPServer):
-    daemon_threads = True
-    allow_reuse_address = True
-
-
-def make_web_handler(app):
-    """Tạo lớp xử lý HTTP gắn với App. Mọi thao tác dữ liệu chạy trong luồng giao diện qua app.call_ui."""
-
-    class Handler(BaseHTTPRequestHandler):
-        server_version = "FshareAutoDownload"
-
-        def log_message(self, *a):
-            pass
-
-        def _send(self, code, body, ctype="application/json; charset=utf-8", extra=None):
-            data = body if isinstance(body, bytes) else body.encode("utf-8")
-            self.send_response(code)
-            self.send_header("Content-Type", ctype)
-            self.send_header("Content-Length", str(len(data)))
-            if "Cache-Control" not in (extra or {}):
-                self.send_header("Cache-Control", "no-store")
-            origin = self.headers.get("Origin", "")
-            if origin.startswith(("moz-extension://", "chrome-extension://")):
-                self.send_header("Access-Control-Allow-Origin", origin)
-            for k, v in (extra or {}).items():
-                self.send_header(k, v)
-            self.end_headers()
-            self.wfile.write(data)
-
-        def _json(self, obj, code=200, extra=None):
-            self._send(code, json.dumps(obj, ensure_ascii=False), extra=extra)
-
-        def _body(self):
-            n = int(self.headers.get("Content-Length") or 0)
-            if not n:
-                return {}
-            try:
-                return json.loads(self.rfile.read(n).decode("utf-8") or "{}")
-            except ValueError:
-                return {}
-
-        def _authed(self):
-            pin = str(app.cfg.get("web_pin", "") or "")
-            if not pin:
-                return True
-            if self.headers.get("X-Pin") is not None:          # tiện ích trình duyệt gửi PIN qua header
-                return self.headers.get("X-Pin") == pin
-            cookie = self.headers.get("Cookie", "")
-            m = re.search(r"(?:^|;\s*)fpin=([^;]+)", cookie)
-            return bool(m and urllib.parse.unquote(m.group(1)) == pin)
-
-        def do_GET(self):
-            path = urllib.parse.urlparse(self.path).path
-            if path in ("/", "/index.html"):
-                html = WEB_HTML.replace("{{TITLE}}", f"{APP_TITLE} {APP_VERSION}")
-                return self._send(200, html, "text/html; charset=utf-8")
-            if path in ("/icon.png", "/icon-180.png", "/icon-512.png", "/apple-touch-icon.png",
-                        "/apple-touch-icon-precomposed.png"):
-                import base64
-                data = ICON512 if path == "/icon-512.png" else ICON180
-                return self._send(200, base64.b64decode(data), "image/png", {"Cache-Control": "max-age=86400"})
-            if path == "/manifest.json":
-                return self._json({"name": APP_TITLE, "short_name": "Fshare DL", "start_url": "/", "scope": "/",
-                                   "display": "standalone", "orientation": "portrait",
-                                   "background_color": "#0f766e", "theme_color": "#0f766e",
-                                   "icons": [{"src": "/icon-180.png", "sizes": "180x180", "type": "image/png"},
-                                             {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png",
-                                              "purpose": "any maskable"}]})
-            self._api("GET", path, {})
-
-        def do_OPTIONS(self):
-            self.send_response(204)
-            self.send_header("Access-Control-Allow-Origin", self.headers.get("Origin") or "*")
-            self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Pin")
-            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-            self.end_headers()
-
-        def do_POST(self):
-            path = urllib.parse.urlparse(self.path).path
-            body = self._body()
-            if path == "/api/login":
-                pin = str(app.cfg.get("web_pin", "") or "")
-                if not pin or str(body.get("pin", "")) == pin:
-                    return self._json({"ok": True}, extra={
-                        "Set-Cookie": f"fpin={urllib.parse.quote(pin)}; Path=/; Max-Age=31536000; SameSite=Lax"})
-                return self._json({"error": "Sai mã PIN"}, 401)
-            self._api("POST", path, body)
-
-        def _api(self, method, path, b):
-            if not path.startswith("/api/"):
-                return self._json({"error": "Không có trang này"}, 404)
-            if not self._authed():
-                return self._json({"error": "Cần mã PIN"}, 401)
-            routes = [
-                ("GET", r"/api/state$", lambda m: app.call_ui(app.api_state)),
-                ("GET", r"/api/folders$", lambda m: app.call_ui(app.api_folders)),
-                ("POST", r"/api/folders/add$", lambda m: app.call_ui(app.api_folder_add, b)),
-                ("POST", r"/api/folders/(\w+)/update$", lambda m: app.call_ui(app.api_folder_update, m.group(1), b)),
-                ("POST", r"/api/folders/(\w+)/scan$", lambda m: app.call_ui(app.api_scan_files, m.group(1))),
-                ("GET", r"/api/folders/(\w+)/files$", lambda m: app.call_ui(app.api_files, m.group(1))),
-                ("POST", r"/api/folders/(\w+)/save$", lambda m: app.call_ui(
-                    app.api_files_save, m.group(1), list(b.get("add", [])), list(b.get("remove", [])))),
-                ("POST", r"/api/scan$", lambda m: app.call_ui(app.api_scan, b.get("download", False))),
-                ("POST", r"/api/stop$", lambda m: app.call_ui(app.api_stop)),
-                ("GET", r"/api/rows$", lambda m: app.call_ui(app.api_rows)),
-                ("POST", r"/api/download$", lambda m: app.call_ui(app.api_download, list(b.get("codes", [])))),
-                ("POST", r"/api/mark$", lambda m: app.call_ui(app.api_mark, list(b.get("codes", [])))),
-                ("GET", r"/api/history$", lambda m: app.call_ui(app.api_history)),
-                ("POST", r"/api/history/upload$", lambda m: app.call_ui(app.api_history_upload,
-                                                                         list(b.get("codes", [])))),
-                ("POST", r"/api/auto$", lambda m: app.call_ui(app.api_auto, b.get("on"), b.get("interval"))),
-            ]
-            for meth, pat, fn in routes:
-                m = re.match(pat, path)
-                if m and meth == method:
-                    try:
-                        return self._json(fn(m))
-                    except ValueError as e:
-                        return self._json({"error": str(e)}, 400)
-                    except Exception as e:
-                        return self._json({"error": f"Lỗi: {e}"}, 500)
-            return self._json({"error": "Không có lệnh này"}, 404)
-
-    return Handler
-
-
-WEB_HTML = r"""<!doctype html>
-<html lang="vi"><head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-<title>{{TITLE}}</title>
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Fshare DL">
-<meta name="format-detection" content="telephone=no">
-<link rel="apple-touch-icon" href="/icon-180.png"><link rel="icon" href="/icon-180.png"><link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#0f766e">
-<style>
-:root{--bg:#f2f3f7;--card:#fff;--text:#111827;--muted:#6b7280;--border:#e5e7eb;--accent:#0e9384;--accent2:#0b7a6e;
---green:#059669;--orange:#d97706;--red:#dc2626;--soft:#e9f6f3;--soft2:#d8efea;--btn:#e8ecf4;--log:#0f172a;
---sat:env(safe-area-inset-top);--sab:env(safe-area-inset-bottom);--tab:58px}
-@media (prefers-color-scheme:dark){:root{--bg:#000;--card:#1c1c1e;--text:#f3f4f6;--muted:#9ca3af;--border:#2c2c2e;
---accent:#2dd4bf;--accent2:#14b8a6;--green:#10b981;--orange:#f59e0b;--red:#f87171;--soft:#0f2a27;--soft2:#143633;--btn:#2c2c2e;--log:#0b0b0d}}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Arial,sans-serif;
--webkit-text-size-adjust:100%;overscroll-behavior-y:contain}
-header{background:linear-gradient(120deg,#0e9384,#115e59);color:#fff;padding:calc(10px + var(--sat)) 16px 12px;display:flex;align-items:center;
-gap:12px;position:sticky;top:0;z-index:20;box-shadow:0 1px 0 rgba(0,0,0,.15)}
-header img{width:36px;height:36px;border-radius:9px}header .t{font-weight:700;font-size:17px;line-height:1.2}
-header .s{font-size:12px;color:#ccf3ec}header .r{margin-left:auto;text-align:right;font-size:12px;color:#e0f7f3;line-height:1.35;max-width:52%}
-#ptr{height:0;overflow:hidden;text-align:center;color:var(--muted);font-size:13px;transition:height .2s}
-main{max-width:900px;margin:0 auto;padding:12px 12px calc(var(--tab) + var(--sab) + 90px)}
-h2{font-size:28px;margin:6px 4px 10px;letter-spacing:-.4px}
-.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}@media(max-width:700px){.cards{grid-template-columns:repeat(2,1fr)}}
-.stat{background:var(--card);border-radius:14px;padding:12px 14px;position:relative;overflow:hidden}
-.stat:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c)}
-.stat b{display:block;font-size:24px;color:var(--c);font-weight:700}.stat span{font-size:12.5px;color:var(--muted)}
-.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
-.btn{border:0;border-radius:12px;padding:11px 15px;font:inherit;font-size:15px;font-weight:600;background:var(--btn);color:var(--text);cursor:pointer}
-.btn:active{opacity:.7}.btn.p{background:var(--accent);color:#fff}.btn.g{background:var(--green);color:#fff}
-.btn.d{background:rgba(220,38,38,.12);color:var(--red)}.btn.sm{padding:8px 12px;font-size:14px;border-radius:10px}.btn[disabled]{opacity:.4}
-.group{background:var(--card);border-radius:14px;padding:12px;margin:10px 0}
-input[type=text],input[type=password],textarea,select{font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--border);
-border-radius:10px;background:var(--card);color:var(--text);width:100%;-webkit-appearance:none;appearance:none}
-select{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
-background-position:calc(100% - 16px) 55%,calc(100% - 11px) 55%;background-size:5px 5px;background-repeat:no-repeat;padding-right:30px;width:auto}
-textarea{min-height:90px}.grow{flex:1;min-width:130px}.muted{color:var(--muted);font-size:13.5px}
-.list{display:flex;flex-direction:column;gap:8px}
-.item{background:var(--card);border-radius:14px;padding:12px;display:flex;gap:12px;align-items:flex-start}
-.item .main{flex:1;min-width:0}.item .nm{font-weight:600;word-break:break-word}.item .sub{font-size:13px;color:var(--muted);word-break:break-word;margin-top:2px}
-.item .st{font-size:13.5px;font-weight:600;margin-top:4px}
-.chk{width:26px;height:26px;flex:0 0 26px;border:2px solid #9ca3af;border-radius:50%;display:flex;align-items:center;justify-content:center;
-color:#fff;font-weight:800;font-size:14px;cursor:pointer;margin-top:1px}.chk.on{background:var(--accent);border-color:var(--accent)}
-.new{color:var(--accent)}.dl{color:var(--orange)}.done{color:var(--green)}.err{color:var(--red)}.skip{color:var(--muted)}
-.fold{background:var(--card);border-radius:16px;padding:14px}
-.fold .h{display:flex;gap:10px;align-items:flex-start}.fold .nm{font-weight:700;font-size:17px;flex:1;word-break:break-word}
-.fold .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-.subs{margin-top:10px;background:var(--soft);border-radius:12px;padding:8px 12px}.subs summary{font-weight:600;color:var(--accent2);cursor:pointer;font-size:14px}
-.subs a{display:block;padding:7px 0;border-top:1px solid var(--border);color:var(--accent);text-decoration:none;font-size:14px;word-break:break-all}
-.subs a span{display:block;color:var(--muted);font-size:12px}
-.sw{position:relative;width:51px;height:31px;flex:0 0 51px}.sw input{display:none}.sw span{position:absolute;inset:0;background:#d1d5db;border-radius:16px;transition:.2s}
-.sw span:before{content:"";position:absolute;left:2px;top:2px;width:27px;height:27px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 2px 4px rgba(0,0,0,.2)}
-.sw input:checked+span{background:#34c759}.sw input:checked+span:before{transform:translateX(20px)}
-#log{background:var(--log);color:#cbd5e1;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;border-radius:12px;padding:10px;max-height:240px;overflow:auto;white-space:pre-wrap}
-.prog{height:5px;background:var(--soft2);border-radius:3px;overflow:hidden;margin-top:6px}.prog i{display:block;height:100%;background:var(--accent);width:0;transition:width .4s}
-.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;background:rgba(255,255,255,.92);backdrop-filter:saturate(180%) blur(18px);
--webkit-backdrop-filter:saturate(180%) blur(18px);border-top:.5px solid rgba(0,0,0,.15);padding-bottom:var(--sab)}
-@media (prefers-color-scheme:dark){.tabbar{background:rgba(22,22,24,.92);border-top-color:rgba(255,255,255,.12)}}
-.tabbar button{flex:1;height:var(--tab);border:0;background:none;font:inherit;font-size:11px;font-weight:600;color:var(--muted);display:flex;
-flex-direction:column;align-items:center;justify-content:center;gap:3px;position:relative;cursor:pointer}
-.tabbar button svg{width:26px;height:26px}.tabbar button.on{color:var(--accent)}
-.tabbar .b{position:absolute;top:5px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--red);color:#fff;
-font-size:11px;line-height:18px;text-align:center}.tabbar .b:empty{display:none}
-.actbar{position:fixed;left:0;right:0;bottom:calc(var(--tab) + var(--sab));z-index:35;display:flex;gap:8px;padding:10px 12px;align-items:center;
-background:rgba(255,255,255,.95);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:.5px solid rgba(0,0,0,.12)}
-@media (prefers-color-scheme:dark){.actbar{background:rgba(22,22,24,.95);border-top-color:rgba(255,255,255,.1)}}
-.actbar .btn{flex:1}.actbar .muted{flex:0 0 auto}
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:60;display:none;align-items:flex-end;justify-content:center}
-.modal.on{display:flex}.sheet{background:var(--bg);width:100%;max-width:900px;height:calc(100% - var(--sat) - 12px);border-radius:14px 14px 0 0;
-display:flex;flex-direction:column;animation:up .25s ease}.sheet.small{height:auto;max-height:90%}
-@keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
-@media(min-width:700px){.modal{align-items:center}.sheet{border-radius:16px;height:auto;max-height:92vh}}
-.sheet .hd{padding:14px 16px;display:flex;gap:10px;align-items:center;background:var(--card);border-radius:14px 14px 0 0;border-bottom:.5px solid var(--border)}
-.sheet .hd b{flex:1;font-size:17px;word-break:break-word}.sheet .bd{padding:12px;overflow:auto;flex:1;-webkit-overflow-scrolling:touch}
-.sheet .ft{padding:10px 12px calc(10px + var(--sab));border-top:.5px solid var(--border);background:var(--card);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.sheet .ft .btn{flex:1;white-space:nowrap}
-.toast{position:fixed;left:50%;bottom:calc(var(--tab) + var(--sab) + 80px);transform:translateX(-50%);background:rgba(17,24,39,.92);color:#fff;
-padding:11px 16px;border-radius:12px;z-index:99;opacity:0;transition:.3s;max-width:92%;text-align:center;pointer-events:none}.toast.on{opacity:1}
-.hide{display:none!important}.empty{text-align:center;color:var(--muted);padding:34px 10px}
-#a2hs{background:var(--soft);border-radius:14px;padding:12px 14px;margin:10px 0;font-size:14px;display:flex;gap:10px;align-items:center}
-#a2hs b{color:var(--accent)}
-details summary{list-style:none;cursor:pointer}details summary::-webkit-details-marker{display:none}
-</style></head><body>
-<header><img src="/icon-180.png" alt=""><div><div class="t">Fshare Auto Download</div><div class="s" id="ver"></div></div>
-<div class="r" id="hdr"></div></header>
-<div id="ptr">↓ Kéo xuống để làm mới</div>
-<main>
-<div id="a2hs" class="hide"><div style="font-size:24px">⬆️</div><div class="grow">Cài như app: bấm <b>Chia sẻ</b> trong Safari →
-<b>Thêm vào MH chính</b>.</div><button class="btn sm" onclick="dismissA2hs()">Đóng</button></div>
-
-<section id="t-scan">
- <h2>Quét &amp; Tải</h2>
- <div class="cards">
-  <div class="stat" style="--c:#6366f1"><b id="s-folders">-</b><span>Thư mục sẽ quét</span></div>
-  <div class="stat" style="--c:var(--accent)"><b id="s-new">-</b><span>File mới chưa có</span></div>
-  <div class="stat" style="--c:var(--orange)"><b id="s-dl">-</b><span>Đang tải</span></div>
-  <div class="stat" style="--c:var(--green)"><b id="s-owned">-</b><span>Danh sách đã có</span></div>
- </div>
- <div class="group">
-  <div style="display:flex;gap:8px"><button class="btn grow" id="btn-scan">⌕ Quét</button><button class="btn p grow" id="btn-go">⬇ Quét &amp; Tải</button>
-  <button class="btn d" id="btn-stop" disabled>■</button></div>
-  <div class="muted" id="status" style="margin-top:8px"></div><div class="prog"><i id="prog"></i></div>
-  <div style="display:flex;align-items:center;gap:10px;margin-top:12px">
-   <div class="grow"><div style="font-weight:600">Tự quét &amp; tải</div><div class="muted" id="auto-info"></div></div>
-   <select id="interval"><option value="15">15 phút</option><option value="30">30 phút</option><option value="45">45 phút</option>
-   <option value="60">60 phút</option><option value="90">90 phút</option><option value="120">120 phút</option></select>
-   <label class="sw"><input type="checkbox" id="auto"><span></span></label></div>
- </div>
- <div style="display:flex;gap:8px;align-items:center;margin:4px 0 10px">
-  <input type="text" class="grow" id="scan-q" placeholder="Tìm tên phim / file">
-  <select id="scan-show"><option value="">Tất cả</option><option value="new">Mới</option><option value="dl">Đang tải</option>
-  <option value="err">Lỗi</option><option value="skip">Chưa duyệt</option></select>
- </div>
- <div style="display:flex;gap:8px;margin-bottom:10px"><button class="btn sm" id="sel-all">Chọn tất cả</button><button class="btn sm" id="sel-none">Bỏ chọn</button></div>
- <div class="list" id="rows"></div>
- <details style="margin-top:16px"><summary class="muted">▸ Nhật ký</summary><div id="log" style="margin-top:8px"></div></details>
-</section>
-
-<section id="t-folders" class="hide">
- <h2>Thư mục</h2>
- <div style="display:flex;gap:8px"><button class="btn p grow" id="f-add">＋ Thêm thư mục</button><button class="btn grow" id="f-bulk">⧉ Dán nhiều link</button></div>
- <input type="text" id="f-q" placeholder="Tìm thư mục" style="margin:10px 0">
- <div class="muted" id="f-info" style="margin:0 4px 8px"></div>
- <div class="list" id="folders"></div>
-</section>
-
-<section id="t-history" class="hide">
- <h2>Lịch sử</h2>
- <input type="text" id="h-q" placeholder="Tìm" style="margin-bottom:10px">
- <div class="list" id="hist"></div>
-</section>
-</main>
-
-<div class="actbar hide" id="scan-acts"><span class="muted" id="sel-count"></span>
- <button class="btn" id="btn-mark">☑ Đã có</button><button class="btn p" id="btn-dl">⬇ Tải</button></div>
-
-<nav class="tabbar">
- <button data-t="scan" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>Quét &amp; Tải<span class="b" id="b-scan"></span></button>
- <button data-t="folders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Thư mục<span class="b" id="b-folders"></span></button>
- <button data-t="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Lịch sử<span class="b" id="b-hist"></span></button>
-</nav>
-
-<div class="modal" id="m-files"><div class="sheet">
- <div class="hd"><b id="mf-title"></b><button class="btn sm" onclick="closeFiles()">Xong</button></div>
- <div class="bd">
-  <div class="muted" id="mf-info" style="margin:0 2px 10px"></div>
-  <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-   <input type="text" class="grow" id="mf-q" placeholder="Tìm file">
-   <select id="mf-show"><option value="">Tất cả</option><option value="no">Chưa có</option><option value="yes">Đã có</option></select></div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-   <button class="btn sm" onclick="mfPick(true)">Chọn tất cả</button><button class="btn sm" onclick="mfPick(false)">Bỏ chọn</button>
-   <button class="btn sm" onclick="mfUntil()">↧ Chọn từ đầu đến file vừa chọn</button></div>
-  <div class="list" id="mf-rows"></div>
- </div>
- <div class="ft"><div class="muted" id="mf-count" style="flex-basis:100%"></div>
-  <button class="btn" onclick="mfMark(false)">↺ Bỏ</button><button class="btn p" onclick="mfMark(true)">☑ Đã có</button>
-  <button class="btn g" id="mf-save" onclick="mfSave()">✓ Lưu</button></div>
-</div></div>
-
-<div class="modal" id="m-form"><div class="sheet small">
- <div class="hd"><button class="btn sm" onclick="hide('m-form')">Hủy</button><b id="ff-title" style="text-align:center"></b>
- <button class="btn sm p" id="ff-ok">Lưu</button></div>
- <div class="bd" id="ff-body"></div>
-</div></div>
-
-<div class="modal" id="m-login"><div class="sheet small" style="max-width:420px">
- <div class="hd"><b>Nhập mã PIN</b></div>
- <div class="bd"><p class="muted">Mã PIN đặt trong tab Cài đặt của tool trên máy tính.</p>
- <input type="password" id="pin" inputmode="numeric" autocomplete="current-password" placeholder="Mã PIN"></div>
- <div class="ft"><button class="btn p" onclick="login()">Vào</button></div>
-</div></div>
-<div class="toast" id="toast"></div>
-
-<script>
-const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase();
-let tab='scan', ver={}, rows=[], sel=new Set(), seenRows=new Set(), folders=[], hist=[], mf=null;
-try{tab=localStorage.getItem('tab')||'scan'}catch(e){tab='scan'}
-async function api(path, body){
-  const r=await fetch(path,{method:body?'POST':'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,credentials:'same-origin'});
-  let j={}; try{j=await r.json()}catch(e){}
-  if(r.status==401){show('m-login');throw new Error('auth')}
-  if(!r.ok) throw new Error(j.error||('Lỗi '+r.status)); return j;
-}
-function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),2600)}
-function show(id){$('#'+id).classList.add('on');document.body.style.overflow='hidden'}
-function hide(id){$('#'+id).classList.remove('on');if(!document.querySelector('.modal.on'))document.body.style.overflow=''}
-async function act(fn,ok){try{const r=await fn(); if(ok) toast(typeof ok=='function'?ok(r):ok); return r}catch(e){if(e.message!='auth') toast('⚠ '+e.message)}}
-async function login(){try{await api('/api/login',{pin:$('#pin').value});hide('m-login');refresh(true)}catch(e){toast('⚠ '+e.message)}}
-$('#pin').addEventListener('keydown',e=>{if(e.key=='Enter')login()});
-function setTab(t){tab=t; try{localStorage.setItem('tab',t)}catch(e){}
-  document.querySelectorAll('.tabbar button').forEach(x=>x.classList.toggle('on',x.dataset.t==t));
-  ['scan','folders','history'].forEach(x=>$('#t-'+x).classList.toggle('hide',x!=t)); window.scrollTo(0,0); refresh(true)}
-document.querySelectorAll('.tabbar button').forEach(b=>b.onclick=()=>setTab(b.dataset.t));
-
-// ---------- hướng dẫn cài như app (Safari iPhone chưa thêm vào màn hình chính)
-const standalone=window.navigator.standalone||matchMedia('(display-mode: standalone)').matches;
-const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
-try{if(ios&&!standalone&&!localStorage.getItem('a2hs'))$('#a2hs').classList.remove('hide')}catch(e){}
-function dismissA2hs(){$('#a2hs').classList.add('hide');try{localStorage.setItem('a2hs','1')}catch(e){}}
-
-// ---------- kéo xuống để làm mới (app toàn màn hình không có nút tải lại)
-let ty=null; const ptr=$('#ptr');
-addEventListener('touchstart',e=>{ty=(window.scrollY<=0&&!document.querySelector('.modal.on'))?e.touches[0].clientY:null},{passive:true});
-addEventListener('touchmove',e=>{if(ty==null)return; const d=e.touches[0].clientY-ty; if(d>0){ptr.style.height=Math.min(50,d/2)+'px';
-  ptr.textContent=d>110?'↻ Thả ra để làm mới':'↓ Kéo xuống để làm mới'}},{passive:true});
-addEventListener('touchend',async()=>{if(ty==null)return; const go=parseFloat(ptr.style.height||0)>=50; ty=null;
-  if(go){ptr.textContent='Đang làm mới...';await refresh(true)} ptr.style.height='0'});
-
-// ---------- trạng thái chung
-async function refresh(force){
-  let s; try{s=await api('/api/state')}catch(e){return}
-  $('#ver').textContent=s.version; $('#hdr').innerHTML=(s.auto?('⏱ Quét lúc '+esc(s.next||'--')):'⏱ Tự quét: tắt')+'<br>'+esc(s.summary||'');
-  $('#s-folders').textContent=s.stats.folders; $('#s-new').textContent=s.stats.new; $('#s-dl').textContent=s.stats.dl; $('#s-owned').textContent=s.stats.owned;
-  $('#b-scan').textContent=s.stats.new||''; $('#b-hist').textContent=s.stats.dl||''; $('#b-folders').textContent=s.stats.unreviewed||'';
-  $('#status').textContent=s.status||''; $('#prog').style.width=(s.progress[1]?Math.min(100,100*s.progress[0]/s.progress[1]):0)+'%';
-  $('#btn-scan').disabled=$('#btn-go').disabled=s.busy; $('#btn-stop').disabled=!s.busy;
-  if(document.activeElement!==$('#interval')){$('#auto').checked=s.auto;$('#interval').value=String(s.interval)}
-  $('#auto-info').textContent=s.auto?('Lần tới: '+(s.next||'--')):'Đang tắt';
-  const lg=$('#log'), atBottom=lg.scrollTop+lg.clientHeight>=lg.scrollHeight-10; lg.textContent=s.log.join('\n'); if(atBottom) lg.scrollTop=lg.scrollHeight;
-  if(tab=='scan'&&(force||s.ver.rows!==ver.rows)) await loadRows();
-  if(tab=='folders'&&(force||s.ver.folders!==ver.folders)) await loadFolders();
-  if(tab=='history'&&(force||s.ver.hist!==ver.hist)) await loadHist();
-  ver=s.ver; window._busy=s.busy; updSel();
-}
-setInterval(()=>{if(!document.hidden)refresh(false)},3000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh(true)});
-
-// ---------- tab Quét & Tải
-async function loadRows(){
-  rows=await api('/api/rows'); const codes=new Set(rows.map(r=>r.code));
-  if(!rows.length){sel.clear();seenRows.clear()}
-  rows.forEach(r=>{if(!seenRows.has(r.code)){seenRows.add(r.code); if(r.tag=='new') sel.add(r.code)}});
-  [...sel].forEach(c=>{if(!codes.has(c)) sel.delete(c)}); renderRows();
-}
-function renderRows(){
-  const q=norm($('#scan-q').value), sh=$('#scan-show').value;
-  const vis=rows.filter(r=>(!q||norm(r.folder+' '+r.name+' '+r.note).includes(q))&&(!sh||r.tag==sh));
-  $('#rows').innerHTML=vis.length?vis.map(r=>`<div class="item" data-c="${r.code}"><div class="chk ${sel.has(r.code)?'on':''}">${sel.has(r.code)?'✓':''}</div>
-   <div class="main"><div class="nm">${esc(r.name)}</div><div class="sub">${esc(r.folder)}${r.note?' · '+esc(r.note):''}</div>
-   <div class="sub">${esc(r.date)} · ${esc(r.size)}</div><div class="st ${r.tag}">${esc(r.status)}</div></div></div>`).join('')
-   :'<div class="empty">Chưa có kết quả.<br>Bấm "⌕ Quét" để tìm file mới.</div>';
-  $('#rows').querySelectorAll('.item').forEach(e=>e.onclick=()=>{const c=e.dataset.c; sel.has(c)?sel.delete(c):sel.add(c); renderRows()});
-  window._visRows=vis; updSel();
-}
-function updSel(){const n=sel.size; $('#sel-count').textContent=n?(n+' file'):''; $('#btn-dl').disabled=$('#btn-mark').disabled=!n||window._busy;
-  $('#scan-acts').classList.toggle('hide',tab!='scan'||!n)}
-$('#scan-q').oninput=renderRows; $('#scan-show').onchange=renderRows;
-$('#sel-all').onclick=()=>{(window._visRows||[]).forEach(r=>sel.add(r.code));renderRows()};
-$('#sel-none').onclick=()=>{(window._visRows||[]).forEach(r=>sel.delete(r.code));renderRows()};
-const startScan=dl=>act(()=>api('/api/scan',{download:dl}),dl?'Đang quét & tải...':'Đang quét...').then(r=>{if(r){sel.clear();seenRows.clear();setTimeout(()=>refresh(true),800)}});
-$('#btn-scan').onclick=()=>startScan(false); $('#btn-go').onclick=()=>startScan(true);
-$('#btn-stop').onclick=()=>act(()=>api('/api/stop',{}),'Đã yêu cầu dừng');
-$('#btn-dl').onclick=()=>act(()=>api('/api/download',{codes:[...sel]}),r=>'Đang tải '+r.count+' file').then(()=>setTimeout(()=>refresh(true),800));
-$('#btn-mark').onclick=()=>act(()=>api('/api/mark',{codes:[...sel]}),'Đã thêm vào Danh sách đã có').then(()=>{sel.clear();refresh(true)});
-$('#auto').onchange=$('#interval').onchange=()=>act(()=>api('/api/auto',{on:$('#auto').checked,interval:+$('#interval').value}),$('#auto').checked?'Đã bật tự quét':'Đã tắt tự quét').then(()=>refresh(false));
-
-// ---------- tab Thư mục
-async function loadFolders(){folders=await api('/api/folders'); renderFolders()}
-function renderFolders(){
-  const q=norm($('#f-q').value), vis=folders.filter(f=>!q||norm(f.name+' '+f.note+' '+f.url).includes(q));
-  $('#f-info').textContent=folders.length+' thư mục · đã duyệt '+folders.filter(f=>f.reviewed).length;
-  $('#folders').innerHTML=vis.length?vis.map(f=>{const code=(f.url.match(/folder\/(\w+)/)||[])[1]||'';
-   return `<div class="fold"><div class="h"><div class="nm">${esc(f.name||'(chưa có tên)')}</div>
-   <label class="sw"><input type="checkbox" ${f.enabled?'checked':''} data-tg="${code}"><span></span></label></div>
-   ${f.note?`<div class="sub muted" style="margin-top:4px">✎ ${esc(f.note)}</div>`:''}
-   <div style="color:${f.color};font-weight:600;font-size:14px;margin-top:8px">${esc(f.status)}</div>
-   ${f.subs&&f.subs.length?`<details class="subs"><summary>Thư mục con (${f.subs.length})</summary>${f.subs.map(d=>
-     `<a href="${esc(d.url)}" target="_blank" rel="noopener">↳ ${esc(d.path)}<span>${esc(d.url)}</span></a>`).join('')}</details>`:''}
-   <div class="acts"><button class="btn p sm" data-sc="${code}">⌕ Quét file</button><button class="btn sm" data-ed="${code}">Sửa</button>
-   <a class="btn sm" href="${esc(f.link)}" target="_blank" rel="noopener" style="text-decoration:none">↗ Fshare</a>
-   <button class="btn d sm" data-del="${code}">Xóa</button></div></div>`}).join(''):'<div class="empty">Chưa có thư mục.<br>Bấm "＋ Thêm thư mục".</div>';
-  $('#folders').querySelectorAll('[data-tg]').forEach(e=>e.onchange=()=>act(()=>api(`/api/folders/${e.dataset.tg}/update`,{enabled:e.checked})));
-  $('#folders').querySelectorAll('[data-sc]').forEach(e=>e.onclick=()=>openFiles(e.dataset.sc));
-  $('#folders').querySelectorAll('[data-ed]').forEach(e=>e.onclick=()=>editFolder(e.dataset.ed));
-  $('#folders').querySelectorAll('[data-del]').forEach(e=>e.onclick=()=>{const f=folders.find(x=>x.url.includes(e.dataset.del));
-   if(confirm('Xóa thư mục "'+(f&&f.name||e.dataset.del)+'"?')) act(()=>api(`/api/folders/${e.dataset.del}/update`,{delete:true}),'Đã xóa').then(loadFolders)});
-}
-$('#f-q').oninput=renderFolders;
-function form(title, html, onok){$('#ff-title').textContent=title;$('#ff-body').innerHTML=html;$('#ff-ok').onclick=onok;show('m-form')}
-const lab=t=>`<div class="muted" style="margin:10px 2px 4px">${t}</div>`;
-$('#f-add').onclick=()=>form('Thêm thư mục',lab('Link thư mục Fshare *')+`<input type="text" id="fa-url" placeholder="https://www.fshare.vn/folder/..." autocapitalize="off" autocorrect="off">`
-  +lab('Tên phim (để trống = tự lấy từ Fshare)')+`<input type="text" id="fa-name">`+lab('Ghi chú')+`<textarea id="fa-note"></textarea>`,
-  ()=>act(()=>api('/api/folders/add',{url:$('#fa-url').value,name:$('#fa-name').value,note:$('#fa-note').value}),'Đã thêm').then(r=>{if(r){hide('m-form');loadFolders()}}));
-$('#f-bulk').onclick=()=>form('Dán nhiều link',lab('Mỗi dòng 1 link. Có thể ghi tên trước: Tên phim | https://www.fshare.vn/folder/XXXX')
-  +`<textarea id="fb-text" style="min-height:220px" autocapitalize="off" autocorrect="off"></textarea>`,
-  ()=>act(()=>api('/api/folders/add',{bulk:$('#fb-text').value}),r=>'Đã thêm '+r.added+' thư mục').then(r=>{if(r){hide('m-form');loadFolders()}}));
-function editFolder(code){const f=folders.find(x=>x.url.includes(code)); if(!f) return;
-  form('Sửa thư mục',lab('Tên phim')+`<input type="text" id="fe-name" value="${esc(f.name)}">`+lab('Ghi chú')+`<textarea id="fe-note">${esc(f.note)}</textarea>`
-  +lab('Chỉ lấy file có (phẩy ngăn cách)')+`<input type="text" id="fe-inc" value="${esc(f.include)}">`+lab('Bỏ qua file có')+`<input type="text" id="fe-exc" value="${esc(f.exclude)}">`,
-  ()=>act(()=>api(`/api/folders/${code}/update`,{name:$('#fe-name').value,note:$('#fe-note').value,include:$('#fe-inc').value,exclude:$('#fe-exc').value}),'Đã lưu').then(r=>{if(r){hide('m-form');loadFolders()}}))}
-
-// ---------- danh sách file của 1 thư mục
-async function openFiles(code){
-  mf={code,rows:[],picked:new Set(),lastPick:null}; $('#mf-title').textContent='Đang tải...'; $('#mf-info').textContent='Đang quét tất cả file trên Fshare...';
-  $('#mf-rows').innerHTML=''; $('#mf-count').textContent=''; show('m-files');
-  try{await api(`/api/folders/${code}/scan`,{})}catch(e){toast('⚠ '+e.message);return}
-  for(let i=0;i<120;i++){await new Promise(r=>setTimeout(r,1000)); if(!mf||mf.code!=code) return;
-    let r; try{r=await api(`/api/folders/${code}/files`)}catch(e){return}
-    $('#mf-title').textContent=r.name;
-    if(r.status=='error'){$('#mf-info').textContent='⚠ Lỗi đọc thư mục: '+r.error;return}
-    if(r.status=='ok'){mf.rows=r.rows.map(x=>Object.assign(x,{orig:x.owned})); mf.reviewed=r.reviewed; renderFiles(); return}}
-}
-function mfChanges(){return mf?mf.rows.filter(r=>r.owned!==r.orig).length:0}
-function closeFiles(){if(mfChanges()&&!confirm('Có '+mfChanges()+' thay đổi chưa lưu. Đóng mà không lưu?')) return; mf=null; hide('m-files'); loadFolders()}
-function renderFiles(){
-  const q=norm($('#mf-q').value), sh=$('#mf-show').value;
-  const vis=mf.rows.filter(r=>(!q||norm(r.name).includes(q))&&(!sh||(sh=='yes')==r.owned)); mf.vis=vis;
-  $('#mf-rows').innerHTML=vis.map(r=>{const p=mf.picked.has(r.code); let st,cl;
-   if(r.owned&&!r.orig){st='✔ Đã có (chưa lưu)';cl='done'}else if(!r.owned&&r.orig){st='↺ Sẽ bỏ khỏi DS (chưa lưu)';cl='err'}
-   else if(r.owned){st='✔ Đã có';cl='done'}else{st='● Chưa có';cl='new'}
-   return `<div class="item" data-c="${r.code}"><div class="chk ${p?'on':''}">${p?'✓':''}</div><div class="main"><div class="nm">${esc(r.name)}</div>
-   <div class="sub">${esc(r.date)} · ${esc(r.sizeh)}</div><div class="st ${cl}">${st}</div></div></div>`}).join('')||'<div class="empty">Không có file.</div>';
-  $('#mf-rows').querySelectorAll('.item').forEach(e=>e.onclick=()=>{const c=e.dataset.c; if(mf.picked.has(c)) mf.picked.delete(c); else {mf.picked.add(c);mf.lastPick=c} renderFiles()});
-  const own=mf.rows.filter(r=>r.owned).length, ch=mfChanges();
-  $('#mf-info').textContent=mf.rows.length+' file · đã có '+own+' · chưa có '+(mf.rows.length-own)+'. Chạm để chọn file → "☑ Đã có" → "✓ Lưu". (↺ Bỏ = cho tải lại)';
-  $('#mf-count').textContent='Đang chọn '+mf.picked.size+(ch?(' · '+ch+' thay đổi CHƯA LƯU'):'');
-  $('#mf-save').disabled=!(ch||!mf.reviewed);
-}
-$('#mf-q').oninput=()=>mf&&renderFiles(); $('#mf-show').onchange=()=>mf&&renderFiles();
-function mfPick(on){mf.vis.forEach(r=>on?mf.picked.add(r.code):mf.picked.delete(r.code)); renderFiles()}
-function mfUntil(){if(!mf.lastPick){toast('Chạm chọn 1 file (VD: tập cuối bạn đã có) trước');return}
-  const i=mf.vis.findIndex(r=>r.code==mf.lastPick); mf.vis.slice(0,i+1).forEach(r=>mf.picked.add(r.code)); renderFiles()}
-function mfMark(on){mf.rows.forEach(r=>{if(mf.picked.has(r.code)) r.owned=on}); mf.picked.clear(); renderFiles()}
-async function mfSave(){const add=mf.rows.filter(r=>r.owned&&!r.orig).map(r=>r.code), remove=mf.rows.filter(r=>!r.owned&&r.orig).map(r=>r.code);
-  const r=await act(()=>api(`/api/folders/${mf.code}/save`,{add,remove}),r=>'Đã lưu: đã có '+r.owned+'/'+r.total);
-  if(r){mf.rows.forEach(x=>x.orig=x.owned); mf.reviewed=true; renderFiles()}}
-
-// ---------- tab Lịch sử
-async function loadHist(){hist=await api('/api/history'); renderHist()}
-function renderHist(){const q=norm($('#h-q').value), vis=hist.filter(h=>!q||norm(h.folder+' '+h.name).includes(q));
-  $('#hist').innerHTML=vis.length?vis.map(h=>`<div class="item"><div class="main"><div class="nm">${esc(h.name)}</div>
-   <div class="sub">${esc(h.folder)} · ${esc(h.time)}</div><div class="st ${h.tag}">${esc(h.status)}${h.pikpak?' · <span class="'+(h.upload=='error'?'err':h.upload=='done'?'done':'dl')+'">'+esc(h.pikpak)+'</span>':''}</div></div>
-   ${h.can_upload?`<button class="btn sm" data-up="${h.code}">⇪ PikPak</button>`:''}</div>`).join(''):'<div class="empty">Chưa có lịch sử tải.</div>';
-  $('#hist').querySelectorAll('[data-up]').forEach(e=>e.onclick=()=>act(()=>api('/api/history/upload',{codes:[e.dataset.up]}),r=>r.count?'Đã thêm vào hàng chờ upload':'Không upload được (file không còn trên máy?)').then(loadHist))}
-$('#h-q').oninput=renderHist;
-setTab(tab);
-</script></body></html>"""
-
-
 class App(tk.Tk):
     def __init__(self, auto=False, startup=False):
         super().__init__()
@@ -1659,8 +1174,6 @@ class App(tk.Tk):
         self.fp = None            # trạng thái khung "file của thư mục" bên tab Thư mục
         self.log_lines = deque(maxlen=300)
         self.rows_ver = self.hist_ver = self.folders_ver = 0
-        self.web_files = {}
-        self.web_srv = None
 
         self._style()
         self._install_edit_bindings()
@@ -1699,7 +1212,6 @@ class App(tk.Tk):
         self.after(2000, self._monitor_tick)
         if self.cfg.get("update_check", True):
             self.after(15000, lambda: self.check_update(silent=True))
-        self.after(4000, self._first_run_firewall)
         self.after(500, self._init_col_memory)
         if requests is None:
             messagebox.showerror(APP_NAME, "Thiếu thư viện 'requests'.\nChạy: pip install requests")
@@ -1717,7 +1229,6 @@ class App(tk.Tk):
         self.up_queued = set()          # file đang nằm trong hàng chờ / đang upload (tránh upload 2 lần)
         threading.Thread(target=self._uploader_loop, daemon=True).start()
         self._resume_uploads()
-        self.start_web()
         self._backup_pending = False
         self.after(1500, lambda: self.check_pikpak(silent=True))
         if self._new_machine:
@@ -1964,16 +1475,12 @@ class App(tk.Tk):
         self.side_bk.pack(fill="x")
         if self.cfg.get("last_backup"):
             self.side_bk.config(text="⟲ Sao lưu: " + self.cfg["last_backup"])
-        self.side_web = tk.Label(ck, text="", bg=C_SIDE_CARD, fg="#7dd3c8", font=(FONT, 10), anchor="w",
-                                 justify="left", wraplength=W, cursor="hand2")
-        self.side_web.pack(fill="x", pady=(2, 0))
-        self.side_web.bind("<Button-1>", lambda e: self._open_web_local())
         tk.Label(ck, text=f"⌂ Máy: {MACHINE}", bg=C_SIDE_CARD, fg=C_SIDE_MUTED, font=(FONT, 9),
                  anchor="w").pack(fill="x", pady=(2, 0))
         self.side_foot = tk.Label(bottom, text="Kéo mép phải thanh này để đổi độ rộng  ·  Ctrl+B / bấm « để thu gọn",
                                   bg=C_SIDE, fg="#4b5561", font=(FONT, 8), anchor="w", justify="left", wraplength=W)
         self.side_foot.pack(fill="x", padx=2)
-        self._side_wraps = [self.side_owned, self.side_last, self.side_pk, self.side_bk, self.side_web, self.side_foot]
+        self._side_wraps = [self.side_owned, self.side_last, self.side_pk, self.side_bk, self.side_foot]
         # vạch kéo đổi độ rộng thanh bên
         grip = tk.Frame(parent, bg="#0a0d10", width=5, cursor="sb_h_double_arrow")
         grip.pack(side="left", fill="y")
@@ -3263,17 +2770,6 @@ class App(tk.Tk):
                     continue
                 if kind in ("row", "rowstatus"):
                     self.rows_ver += 1
-                if kind == "webfiles":
-                    self.web_files[msg[1]] = msg[2]
-                    if msg[2].get("real"):
-                        try:
-                            i, f = self._folder_by_code(msg[1])
-                            if not f.get("name"):
-                                f["name"] = msg[2]["real"]
-                                self.save_config(); self.refresh_folders()
-                        except ValueError:
-                            pass
-                    continue
                 if kind == "log":
                     line = f"{dt.datetime.now():%H:%M:%S}  {msg[1]}"
                     self.log_lines.append(line)
@@ -3407,73 +2903,8 @@ class App(tk.Tk):
             self.save_owned()
         self.after(150, self._poll)
 
-    # ================================================================ GIAO DIỆN WEB
-    def _open_web_local(self):
-        import webbrowser
-        if not getattr(self, "web_srv", None):
-            messagebox.showwarning(APP_NAME, "Giao diện web đang tắt hoặc không mở được cổng.\n"
-                                             "Vào Cài đặt -> Tự động & Web: bật giao diện web / đổi cổng khác (VD 8090) rồi Lưu.")
-            return
-        webbrowser.open(f"http://127.0.0.1:{int(self.cfg.get('web_port', 8080) or 8080)}")
-
-    def open_firewall(self, quiet=False):
-        """Cho iPhone / máy khác vào giao diện web: xóa luật CHẶN cũ (khi lỡ bấm Cancel ở hộp thoại 'Allow'
-        của Windows) + thêm luật cho phép theo chương trình và theo cổng. Cần quyền Admin."""
-        if os.name != "nt":
-            return False
-        import ctypes
-        import tempfile
-        port = int(self.cfg.get("web_port", 8080) or 8080)
-        progs = {str(Path(sys.executable).resolve())}
-        if not getattr(sys, "frozen", False):          # chạy bằng Python: cả python.exe và pythonw.exe
-            d = Path(sys.executable).resolve().parent
-            progs |= {str(d / "python.exe"), str(d / "pythonw.exe")}
-        name = "Fshare Auto Download (web)"
-        lines = ["$ErrorActionPreference = 'SilentlyContinue'"]
-        for pg in sorted(progs):
-            q = pg.replace("'", "''")
-            lines.append(f"Get-NetFirewallApplicationFilter | Where-Object {{ $_.Program -eq '{q}' }} | "
-                         "Get-NetFirewallRule | Where-Object { $_.Direction -eq 'Inbound' -and $_.Action -eq 'Block' } | "
-                         "Remove-NetFirewallRule")
-        lines.append(f"Remove-NetFirewallRule -DisplayName '{name}'")
-        lines.append(f"New-NetFirewallRule -DisplayName '{name}' -Direction Inbound -Action Allow -Protocol TCP "
-                     f"-LocalPort {port} -Profile Any | Out-Null")
-        for pg in sorted(progs):
-            if os.path.isfile(pg):
-                q = pg.replace("'", "''")
-                lines.append(f"New-NetFirewallRule -DisplayName '{name}' -Direction Inbound -Action Allow "
-                             f"-Program '{q}' -Profile Any | Out-Null")
-        ps1 = Path(tempfile.gettempdir()) / "fad_firewall.ps1"
-        ps1.write_text("\r\n".join(lines), encoding="utf-8-sig")
-        r = ctypes.windll.shell32.ShellExecuteW(None, "runas", "powershell.exe",
-                                                f'-NoProfile -ExecutionPolicy Bypass -File "{ps1}"', None, 0)
-        if r <= 32:
-            if not quiet:
-                messagebox.showwarning(APP_NAME, "Chưa mở được (cần bấm Yes ở hộp thoại quyền Admin của Windows).")
-            return False
-        self.cfg["fw_ok_for"] = str(Path(sys.executable).resolve()) + f"|{port}"
-        save_json(CONFIG_FILE, self.cfg)
-        self.log(f"⛨ Đã cho phép giao diện web (cổng {port}) qua tường lửa Windows.")
-        if not quiet:
-            messagebox.showinfo(APP_NAME, "Đã cho phép. Mở lại trên iPhone (cùng Wi-Fi):\n" + "\n".join(self.web_urls()))
-        return True
-
-    def _first_run_firewall(self):
-        """Giống hộp thoại 'Allow' của Windows lần đầu: hỏi 1 lần cho mỗi exe / cổng."""
-        if os.name != "nt" or not self.cfg.get("web_on", True) or not getattr(self, "web_srv", None):
-            return
-        key = str(Path(sys.executable).resolve()) + f"|{int(self.cfg.get('web_port', 8080) or 8080)}"
-        if self.cfg.get("fw_ok_for") == key or self.cfg.get("fw_asked") == key:
-            return
-        self.cfg["fw_asked"] = key
-        save_json(CONFIG_FILE, self.cfg)
-        if messagebox.askyesno(APP_NAME + " - Cho phép truy cập", "Cho phép iPhone / máy khác trong cùng Wi-Fi mở giao "
-                               "diện web của tool?\n\nWindows sẽ hỏi quyền Admin -> bấm Yes.\n"
-                               "(Làm lại sau: Cài đặt -> Tự động & Web -> \"Mở cổng tường lửa\")"):
-            self.open_firewall()
-
     def call_ui(self, fn, *args, timeout=20):
-        """Chạy fn trong luồng giao diện (Tk) và chờ kết quả - dùng cho các yêu cầu từ trang web."""
+        """Chạy fn trong luồng giao diện (Tk) và chờ kết quả (gọi từ luồng nền)."""
         if threading.current_thread() is threading.main_thread():
             return fn(*args)
         holder, ev = {}, threading.Event()
@@ -3483,276 +2914,6 @@ class App(tk.Tk):
         if "err" in holder:
             raise holder["err"]
         return holder.get("res")
-
-    def web_urls(self):
-        port = int(self.cfg.get("web_port", 8080) or 8080)
-        ips = []
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(("8.8.8.8", 80))
-            ips.append(s.getsockname()[0])
-            s.close()
-        except OSError:
-            pass
-        try:
-            for info in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET):
-                ip = info[4][0]
-                if ip not in ips and not ip.startswith("127."):
-                    ips.append(ip)
-        except OSError:
-            pass
-        return [f"http://{ip}:{port}" for ip in ips] or [f"http://localhost:{port}"]
-
-    def start_web(self, _try=0):
-        self.stop_web()
-        if not self.cfg.get("web_on", True):
-            self._web_label("Giao diện web: tắt")
-            return
-        port = int(self.cfg.get("web_port", 8080) or 8080)
-        try:
-            srv = WebServer(("0.0.0.0", port), make_web_handler(self))
-        except OSError as e:
-            if _try < 3:            # vừa khởi động lại / bản cũ chưa nhả cổng -> thử lại
-                self.after(2500, lambda: self.start_web(_try + 1))
-                return
-            self.log(f"⚠ Không mở được giao diện web ở cổng {port}: {e} - cổng có thể đang bị chương trình khác "
-                     "dùng, đổi cổng khác trong Cài đặt -> Tự động & Web.")
-            self._web_label(f"⚠ Web lỗi cổng {port} (đổi cổng trong Cài đặt)")
-            return
-        self.web_srv = srv
-        threading.Thread(target=srv.serve_forever, daemon=True).start()
-        urls = self.web_urls()
-        self.log("◍ Giao diện web: " + "  |  ".join(urls))
-        self._web_label("◍ Web: " + urls[0].replace("http://", ""))
-
-    def stop_web(self):
-        srv = getattr(self, "web_srv", None)
-        if srv:
-            threading.Thread(target=lambda: (srv.shutdown(), srv.server_close()), daemon=True).start()
-            self.web_srv = None
-
-    def _web_label(self, text):
-        try:
-            self.side_web.config(text=text)
-        except (AttributeError, tk.TclError):
-            pass
-
-    # ----- dữ liệu cho trang web (chạy trong luồng giao diện)
-    def api_state(self):
-        busy = bool(self.worker and self.worker.is_alive())
-        on = [f for f in self.cfg["folders"] if f.get("enabled", True)]
-        return {
-            "app": APP_TITLE, "version": APP_VERSION, "busy": busy,
-            "status": self.status_var.get(),
-            "progress": [float(self.progress.cget("value") or 0), float(self.progress.cget("maximum") or 1)],
-            "stats": {"folders": f"{len(on)}/{len(self.cfg['folders'])}", "new": getattr(self, "_new_count", 0),
-                      "dl": sum(1 for h in self.history.values() if h.get("status") in WATCH_STATUSES),
-                      "owned": len(self.owned),
-                      "unreviewed": sum(1 for f in on if not f.get("reviewed"))},
-            "auto": bool(self.cfg.get("auto_scan")), "interval": int(self.cfg.get("auto_interval", 60)),
-            "next": (dt.datetime.fromtimestamp(self.next_auto_ts).strftime("%H:%M") if self.next_auto_ts else ""),
-            "summary": self.last_summary or self.cfg.get("last_summary", ""),
-            "log": list(self.log_lines)[-40:],
-            "ver": {"rows": self.rows_ver, "hist": self.hist_ver, "folders": self.folders_ver},
-        }
-
-    def api_folders(self):
-        out = []
-        for i, f in enumerate(self.cfg["folders"]):
-            text, color = self._folder_status(f)
-            out.append({"i": i, "name": f.get("name", ""), "url": f.get("url", ""), "note": f.get("note", ""),
-                        "enabled": f.get("enabled", True), "reviewed": bool(f.get("reviewed")),
-                        "total": f.get("total", 0), "owned": f.get("owned", 0), "status": text, "color": color,
-                        "include": f.get("include", ""), "exclude": f.get("exclude", ""),
-                        "link": folder_link(get_code(f.get("url"))) or f.get("url", ""),
-                        "subs": [{"path": d["path"], "url": folder_link(d["code"])} for d in f.get("subs", [])]})
-        return out
-
-    def _folder_by_code(self, code):
-        for i, f in enumerate(self.cfg["folders"]):
-            if get_code(f.get("url")) == code:
-                return i, f
-        raise ValueError("Không tìm thấy thư mục")
-
-    def api_folder_add(self, d):
-        if d.get("bulk"):
-            added = 0
-            for line in str(d["bulk"]).splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                name, url = ("", line)
-                if "|" in line:
-                    name, url = [x.strip() for x in line.split("|", 1)]
-                added += self._add_folder(name, url)
-        else:
-            added = int(self._add_folder(d.get("name", ""), d.get("url", ""), note=d.get("note", "")))
-            if not added:
-                raise ValueError("Link không hợp lệ hoặc đã có trong danh sách.")
-        self.save_config(); self.refresh_folders()
-        return {"added": added}
-
-    def api_folder_update(self, code, d):
-        i, f = self._folder_by_code(code)
-        if d.get("delete"):
-            del self.cfg["folders"][i]
-            if self.active_folder == i:
-                self.active_folder, self.fp = None, None
-                self._fp_clear()
-            elif self.active_folder is not None and self.active_folder > i:
-                self.active_folder -= 1
-                if self.fp:
-                    self.fp["index"] = self.active_folder
-        else:
-            for k in ("name", "note", "include", "exclude"):
-                if k in d:
-                    f[k] = str(d[k]).strip()
-            if "enabled" in d:
-                f["enabled"] = bool(d["enabled"])
-        self.save_config(); self.refresh_folders()
-        return {"ok": True}
-
-    def api_scan_files(self, code):
-        """Bắt đầu đọc tất cả file của 1 thư mục (chạy nền)."""
-        i, f = self._folder_by_code(code)
-        self.web_files[code] = {"status": "loading", "rows": [], "error": ""}
-        cfg = json.loads(json.dumps(self.cfg))
-        f = dict(f)
-
-        def job():
-            try:
-                fs = FshareFolder()
-                real, _ = fs.list_folder(code)
-                files = list(fs.walk(code))
-                self.note_listing(files)
-                exts = {e.lower() if e.startswith(".") else "." + e.lower()
-                        for e in cfg.get("extensions", "").split() if e.strip()}
-                inc, exc = f.get("include", ""), f.get("exclude", "")
-                rows, seen = [], set()
-                for it in files:
-                    name, fc = it.get("name") or "", it.get("linkcode")
-                    if not fc or not name or fc in seen:
-                        continue
-                    if exts and os.path.splitext(name)[1].lower() not in exts:
-                        continue
-                    if (inc or exc) and not match_keywords(name, inc, exc):
-                        continue
-                    seen.add(fc)
-                    d = fs.item_date(it)
-                    rows.append({"code": fc, "name": name, "size": it.get("size"), "sub": it.get("_sub", ""),
-                                 "date": d.strftime("%d/%m/%Y") if d else ""})
-                rows.sort(key=lambda r: (natural_key(r["sub"]), natural_key(r["name"])))
-                subdirs = list(fs.subdirs)
-                self.q.put(("call", lambda: self._set_subs(code, subdirs), (), {}, threading.Event()))
-                self.q.put(("webfiles", code, {"status": "ok", "rows": rows, "real": real, "error": ""}))
-            except Exception as e:
-                self.q.put(("webfiles", code, {"status": "error", "rows": [], "error": str(e)}))
-        threading.Thread(target=job, daemon=True).start()
-        return {"ok": True}
-
-    def api_files(self, code):
-        i, f = self._folder_by_code(code)
-        st = self.web_files.get(code) or {"status": "none", "rows": []}
-        idx = self.owned_index()
-        rows = [dict(r, owned=self.is_owned(idx, r["code"], code, r["name"]), sizeh=human_size(r["size"]),
-                     name=sub_label(r.get("sub", ""), r["name"]))
-                for r in st.get("rows", [])]
-        return {"status": st["status"], "error": st.get("error", ""), "name": f.get("name") or code,
-                "reviewed": bool(f.get("reviewed")), "rows": rows}
-
-    def api_files_save(self, code, add, remove):
-        i, f = self._folder_by_code(code)
-        st = self.web_files.get(code) or {}
-        meta = {r["code"]: r for r in st.get("rows", [])}
-        fname = f.get("name") or code
-        for c in add:
-            r = meta.get(c)
-            if r:
-                self.add_owned(c, code, fname, r["name"], r["size"], "manual")
-        for c in remove:
-            r = meta.get(c)
-            if r:
-                self.remove_owned(c, code, r["name"])
-        self.save_owned()
-        idx = self.owned_index()
-        own = sum(1 for r in meta.values() if self.is_owned(idx, r["code"], code, r["name"]))
-        f.update(total=len(meta), owned=own, last_scan=time.time(), reviewed=True, last_error="")
-        if self.fp and self.fp.get("code") == code and not self.fp.get("loading"):   # đồng bộ khung trên máy
-            for c, r in self.fp["rows"].items():
-                if c in add:
-                    r["owned"] = r["orig"] = True
-                elif c in remove:
-                    r["owned"] = r["orig"] = False
-            self._fp_refresh()
-        self.save_config(); self.refresh_folders()
-        self.log(f"[{fname}] (web) Lưu Danh sách đã có: +{len(add)}" + (f", bỏ {len(remove)}" if remove else ""))
-        return {"owned": own, "total": len(meta)}
-
-    def api_scan(self, download):
-        if self.worker and self.worker.is_alive():
-            raise ValueError("Tool đang quét / tải, đợi xong đã.")
-        if not self.start_scan(bool(download), auto=True):
-            raise ValueError("Không quét được - xem nhật ký (chưa có thư mục / thiếu Firefox?).")
-        return {"ok": True}
-
-    def api_stop(self):
-        self.stop_flag.set()
-        return {"ok": True}
-
-    def api_rows(self):
-        out = []
-        for c in self.scan_order:
-            if not self.scan_tree.exists(c):
-                continue
-            v = self.scan_tree.item(c, "values")
-            tags = [t for t in self.scan_tree.item(c, "tags") if t != "odd"]
-            out.append({"code": c, "folder": v[0], "note": v[1], "name": v[2], "date": v[3], "size": v[4],
-                        "status": v[5], "tag": tags[0] if tags else "", "checked": c in self.checked})
-        return out
-
-    def api_download(self, codes):
-        if self.worker and self.worker.is_alive():
-            raise ValueError("Tool đang quét / tải, đợi xong đã.")
-        if not os.path.isfile(self.cfg.get("firefox_path", "")):
-            raise ValueError("Không tìm thấy firefox.exe (xem tab Cài đặt trên máy tính).")
-        idx = self.owned_index()
-        items = [self.scan_items[c] for c in codes if c in self.scan_items]
-        items = [it for it in items if not self.is_owned(idx, it[0], it[4], it[2])]
-        if not items:
-            raise ValueError("Không có file nào cần tải.")
-        for c in self.scan_order:
-            if self.scan_tree.exists(c):
-                self._set_check(c, c in codes)
-        self._update_sel_count()
-        self._run_worker(self._download_job, items)
-        return {"count": len(items)}
-
-    def api_mark(self, codes):
-        for c in self.scan_order:
-            if self.scan_tree.exists(c):
-                self._set_check(c, c in codes)
-        self.mark_selected_owned()
-        return {"ok": True}
-
-    def api_history(self):
-        items = sorted(self.history.items(), key=lambda kv: kv[1].get("ts", 0) or 0, reverse=True)[:300]
-        return [{"code": c, "folder": h.get("folder", ""), "name": h.get("name", ""), "time": h.get("sent_at", ""),
-                 "status": self._status_text(h.get("status", "")), "tag": self._status_tag(h.get("status", "")),
-                 "pikpak": self._upload_text(h), "upload": h.get("upload", ""),
-                 "can_upload": bool(h.get("path")) and h.get("upload") not in ("pending", "uploading")}
-                for c, h in items]
-
-    def api_history_upload(self, codes):
-        n = sum(1 for c in codes if self.enqueue_upload(c, force=True))
-        self.save_history(); self.refresh_history()
-        return {"count": n}
-
-    def api_auto(self, on, interval):
-        self.auto_var.set(bool(on))
-        if interval:
-            self.interval_var.set(str(int(interval)))
-        self._auto_changed()
-        return {"ok": True}
 
     # ================================================================ PHẦN DÙNG LẠI
     def _set_icon(self):
@@ -3888,7 +3049,7 @@ class App(tk.Tk):
         "folders": ("Thư mục Fshare", "Thêm thư mục phim, quét toàn bộ file (cả thư mục con) và đánh dấu tập đã có"),
         "scan": ("Quét & Tải", "Tìm tập mới chưa có trong Danh sách đã có và gửi sang IDM"),
         "history": ("Lịch sử tải", "Theo dõi tải xong · copy vào thư mục phim · upload PikPak"),
-        "settings": ("Cài đặt", "Tải về · Lưu trữ & PikPak · Tự động & Web · Máy này & Sao lưu"),
+        "settings": ("Cài đặt", "Tải về · Lưu trữ & PikPak · Tự động · Máy này & Sao lưu"),
     }
 
     def _build_header(self, parent):
@@ -4217,15 +3378,11 @@ class App(tk.Tk):
         self.organize_var = tk.BooleanVar(value=bool(self.cfg.get("organize", False)))
         self.lib_var = tk.StringVar(value=self.cfg.get("library_root", ""))
         self.pk_on_var = tk.BooleanVar(value=bool(self.cfg.get("pikpak_on", False)))
-        self.web_on_var = tk.BooleanVar(value=bool(self.cfg.get("web_on", True)))
-        self.web_port_var = tk.IntVar(value=int(self.cfg.get("web_port", 8080) or 8080))
-        self.web_pin_var = tk.StringVar(value=str(self.cfg.get("web_pin", "") or ""))
         self.pk_root_var = tk.StringVar(value=self.cfg.get("pikpak_root", ""))
         self.backup_on_var = tk.BooleanVar(value=bool(self.cfg.get("backup_on", True)))
         self.pk_status = tk.StringVar(value="")
         self.bk_status = tk.StringVar(value=("Lần sao lưu gần nhất: " + self.cfg["last_backup"])
                                       if self.cfg.get("last_backup") else "Chưa sao lưu lần nào.")
-        self.web_url_var = tk.StringVar(value="  ".join(self.web_urls()))
 
         # ----- thanh chọn mục
         top = ttk.Frame(f, style="Card.TFrame")
@@ -4237,7 +3394,7 @@ class App(tk.Tk):
         body.pack(fill="both", expand=True, pady=(12, 0))
         self._set_pages = {}
         for key, text in (("dl", "⬇  Tải về"), ("store", "▤  Lưu trữ & PikPak"),
-                          ("auto", "⚙  Tự động & Web"), ("machine", "⌂  Máy này & Sao lưu")):
+                          ("auto", "⚙  Tự động"), ("machine", "⌂  Máy này & Sao lưu")):
             lb = tk.Label(seg, text=text, bg="#e6eaee", fg=C_MUTED, font=(FONT, 10, "bold"), padx=14, pady=6,
                           cursor="hand2")
             lb.pack(side="left", padx=1)
@@ -4343,7 +3500,7 @@ class App(tk.Tk):
             side="left", padx=8)
         g.label(self.pk_status, foreground=C_ACCENT, font=(FONT, 10, "bold"))
 
-        # ----- 3. Tự động & Web
+        # ----- 3. Tự động
         g = G(self._set_pages["auto"])
         g.section("Tự động")
         fr = g.frame()
@@ -4357,25 +3514,6 @@ class App(tk.Tk):
         tray_state = "normal" if TRAY_OK else "disabled"
         g.check("Bấm X thì thu nhỏ xuống khay hệ thống (góc đồng hồ)", self.tray_var, tray_state)
         g.check("Thông báo Windows khi có file mới / tải xong / upload xong", self.notify_var, tray_state)
-        g.section("Giao diện web (điện thoại / tiện ích Firefox)",
-                  "Nên đặt mã PIN. Cùng Wi-Fi: mở địa chỉ bên dưới trên điện thoại. Ở ngoài nhà: dùng Tailscale.")
-        g.check("Bật giao diện web", self.web_on_var)
-        fr = g.frame()
-        ttk.Label(fr, text="Cổng").pack(side="left")
-        ttk.Spinbox(fr, from_=1024, to=65535, width=7, textvariable=self.web_port_var).pack(side="left", padx=(6, 16))
-        ttk.Label(fr, text="Mã PIN").pack(side="left")
-        ttk.Entry(fr, textvariable=self.web_pin_var, width=14, show="•").pack(side="left", padx=6)
-        ul = ttk.Label(self._set_pages["auto"], textvariable=self.web_url_var, foreground=C_ACCENT, cursor="hand2",
-                       font=(FONT, 10, "bold"), wraplength=760)
-        ul.grid(row=g.r, column=0, columnspan=3, sticky="w", pady=(6, 0))
-        ul.bind("<Button-1>", lambda e: self._open_web_local())
-        g.r += 1
-        fr = g.frame()
-        ttk.Button(fr, text="⛨  Cho phép qua tường lửa Windows (cần quyền Admin)", command=self.open_firewall).pack(side="left")
-        ttk.Button(fr, text="↗  Mở thử trên máy này", command=self._open_web_local).pack(side="left", padx=8)
-        g.hint("Điện thoại / máy khác không vào được: (1) bấm \"Cho phép qua tường lửa\", (2) điện thoại phải cùng Wi-Fi "
-               "(tắt 4G, tắt VPN / iCloud Private Relay), (3) gõ đúng địa chỉ có http:// và :cổng, (4) Wi-Fi của Windows "
-               "nên để chế độ Private (Riêng tư).")
 
         # ----- 4. Máy này & Sao lưu
         g = G(self._set_pages["machine"])
@@ -4506,8 +3644,6 @@ class App(tk.Tk):
                          (self.pk_root_var, "pikpak_root")):
             var.set(self.cfg.get(key, "") or "")
         self.organize_var.set(bool(self.cfg.get("organize")))
-        self.web_on_var.set(bool(self.cfg.get("web_on", True)))
-        self.web_port_var.set(int(self.cfg.get("web_port", 8080) or 8080))
         self.startwin_var.set(bool(self.cfg.get("start_with_windows")))
 
     def _new_machine_dialog(self):
@@ -5180,17 +4316,6 @@ class App(tk.Tk):
             self.cfg["organize"] = self.organize_var.get()
             self.cfg["library_root"] = self.lib_var.get().strip()
             self.cfg["pikpak_on"] = self.pk_on_var.get()
-            old_web = (self.cfg.get("web_on"), self.cfg.get("web_port"))
-            self.cfg["web_on"] = self.web_on_var.get()
-            try:
-                self.cfg["web_port"] = min(65535, max(1024, int(self.web_port_var.get())))
-            except (tk.TclError, ValueError):
-                self.cfg["web_port"] = 8080
-            self.cfg["web_pin"] = self.web_pin_var.get().strip()
-            if old_web != (self.cfg["web_on"], self.cfg["web_port"]) and getattr(self, "web_srv", "init") != "init":
-                self.after(100, self.start_web)
-                if hasattr(self, "web_url_var"):
-                    self.after(200, lambda: self.web_url_var.set("  ".join(self.web_urls())))
             self.cfg["backup_on"] = self.backup_on_var.get()
             self.cfg["pikpak_root"] = pikpak_join(self.pk_root_var.get())
             want = self.startwin_var.get()
@@ -5455,7 +4580,6 @@ class App(tk.Tk):
             self._remember_window()
         if not self._no_save:
             self.save_config()
-        self.stop_web()
         if self.tray:
             try:
                 self.tray.stop()
@@ -5535,6 +4659,6 @@ if __name__ == "__main__":
         except Exception:
             pass
     if "--after-update" in sys.argv:
-        time.sleep(2.5)           # chờ bản cũ thoát hẳn (nhả cổng web)
+        time.sleep(2.5)           # chờ bản cũ thoát hẳn
     if not run_newer_script():
         App(auto="--auto" in sys.argv, startup="--startup" in sys.argv).mainloop()
