@@ -22,7 +22,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Doc phien ban
         shell: pwsh
         run: |
@@ -35,7 +35,8 @@ jobs:
             if ($LASTEXITCODE -eq 0) { $skip = "1"; Write-Host "Release $v da co - bo qua." }
           }
           "SKIP=$skip" | Out-File -Append $env:GITHUB_ENV
-      - uses: actions/setup-python@v5
+          exit 0
+      - uses: actions/setup-python@v6
         if: env.SKIP == '0'
         with:
           python-version: "3.12"
