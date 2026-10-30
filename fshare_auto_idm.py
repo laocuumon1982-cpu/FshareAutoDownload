@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Fshare Auto Download v6.2 by Duy Anh
+Fshare Auto Download v6.3 by Duy Anh
 - Quét các thư mục Fshare, lấy tập cập nhật trong ngày (hoặc N ngày gần đây)
 - Mở link từng tập mới trên Firefox (đã đăng nhập Fshare VIP) -> IDM bắt link -> tự bấm "Bắt đầu tải"
 - Theo dõi thư mục lưu của IDM, tải xong thì chuyển trạng thái "Đang tải" -> "Xong"
@@ -40,7 +40,7 @@ except Exception:
     TRAY_OK = False
 
 APP_TITLE = "Fshare Auto Download"
-APP_VERSION = "v6.2 by Duy Anh"
+APP_VERSION = "v6.3 by Duy Anh"
 APP_NAME = f"{APP_TITLE} {APP_VERSION}"
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 DATA_DIR = BASE / "Data"                # v5.9: mọi dữ liệu nằm trong Data\ -> lên bản mới chỉ cần chép thư mục Data
@@ -805,6 +805,33 @@ def stage_update(zip_path):
     return new_ver, pending_exe
 
 
+def clean_env():
+    """Môi trường sạch để mở lại chính tool (bản exe PyInstaller onefile).
+    Nếu để nguyên, bản mới dùng chung thư mục tạm _MEI... của bản cũ -> bản cũ thoát thì thư mục bị xóa
+    -> lỗi 'No such file or directory: ...\\Temp\\_MEIxxxx\\base_library.zip'."""
+    env = {k: v for k, v in os.environ.items()
+           if not (k.startswith("_MEIPASS") or k.startswith("_PYI_") or k == "_PYIBoot_SPLASH")}
+    env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
+    if getattr(sys, "frozen", False):          # bỏ thư mục _MEI cũ khỏi PATH / TCL / TK
+        mei = str(getattr(sys, "_MEIPASS", "") or "")
+        if mei:
+            env["PATH"] = os.pathsep.join(x for x in env.get("PATH", "").split(os.pathsep)
+                                          if x and not x.startswith(mei))
+            for k in ("TCL_LIBRARY", "TK_LIBRARY", "TCLLIBPATH", "SSL_CERT_FILE", "REQUESTS_CA_BUNDLE"):
+                if env.get(k, "").startswith(mei):
+                    env.pop(k, None)
+    return env
+
+
+def restart_self(extra=()):
+    """Mở lại tool (đúng kiểu đang chạy: exe hoặc .py) với môi trường sạch."""
+    if getattr(sys, "frozen", False):
+        cmd = [sys.executable] + list(extra)
+    else:
+        cmd = [sys.executable, str(BASE / "fshare_auto_idm.py")] + list(extra)
+    subprocess.Popen(cmd, cwd=str(BASE), env=clean_env(), close_fds=True)
+
+
 def run_newer_script():
     """Bản exe: nếu cạnh exe có fshare_auto_idm.py MỚI HƠN (do bấm Cập nhật) thì chạy code mới đó
     bằng Python có sẵn trong exe -> cập nhật được cả bản exe mà không cần đóng gói lại."""
@@ -822,7 +849,7 @@ def run_newer_script():
 # ----------------------------------------------------------------- Firefox
 def open_in_firefox(firefox, url):
     flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
-    subprocess.Popen([firefox, "-new-tab", url], creationflags=flags)
+    subprocess.Popen([firefox, "-new-tab", url], creationflags=flags, env=clean_env())
 
 
 def firefox_download_dirs():
@@ -3923,21 +3950,23 @@ class App(tk.Tk):
         self._no_save = True
         self.save_history()
         flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
-        if pending_exe:       # bản exe: thay file exe sau khi tool thoát
+        if pending_exe:       # bản exe: thay file exe sau khi tool thoát hẳn
             exe = Path(sys.executable)
             bat = BASE / "_capnhat.bat"
+            waits = "".join(   # exe onefile có 2 tiến trình (khởi động + chính) -> chờ cả hai thoát
+                f':w{n}\r\ntasklist /FI "PID eq {pid}" | find " {pid} " >nul && (ping -n 2 127.0.0.1 >nul & goto w{n})\r\n'
+                for n, pid in enumerate({os.getpid(), os.getppid()}))
             bat.write_text(
-                "@echo off\r\n"
-                ":wait\r\n"
-                f'tasklist /FI "PID eq {os.getpid()}" | find "{os.getpid()}" >nul && (ping -n 2 127.0.0.1 >nul & goto wait)\r\n'
-                f'move /y "{pending_exe}" "{exe}" >nul\r\n'
+                "@echo off\r\n" + waits +
+                "ping -n 2 127.0.0.1 >nul\r\n"
+                "set _r=0\r\n"
+                f':mv\r\nmove /y "{pending_exe}" "{exe}" >nul 2>nul || (set /a _r+=1 & ping -n 2 127.0.0.1 >nul & '
+                'if %_r% lss 15 goto mv)\r\n'
                 f'start "" "{exe}" --after-update\r\n'
                 'del "%~f0"\r\n', encoding="utf-8")
-            subprocess.Popen(["cmd", "/c", str(bat)], creationflags=flags, cwd=str(BASE))
-        elif getattr(sys, "frozen", False):
-            subprocess.Popen([sys.executable, "--after-update"], cwd=str(BASE))
+            subprocess.Popen(["cmd", "/c", str(bat)], creationflags=flags, cwd=str(BASE), env=clean_env())
         else:
-            subprocess.Popen([sys.executable, str(BASE / "fshare_auto_idm.py"), "--after-update"], cwd=str(BASE))
+            restart_self(["--after-update"])
         self.quit_app(force=True)
 
     def _restore_zip(self, path):
@@ -3960,10 +3989,7 @@ class App(tk.Tk):
             messagebox.showerror(APP_NAME, f"Không khôi phục được: {e}")
             return
         self._no_save = True
-        if getattr(sys, "frozen", False):
-            subprocess.Popen([sys.executable])
-        else:
-            subprocess.Popen([sys.executable, os.path.abspath(__file__)])
+        restart_self(["--after-update"])
         self.quit_app()
 
     # ================================================================ PIKPAK

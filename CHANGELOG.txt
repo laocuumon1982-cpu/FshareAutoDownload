@@ -1,6 +1,11 @@
 FSHARE AUTO DOWNLOAD by Duy Anh - NHẬT KÝ PHIÊN BẢN
 ==================================================
 
+v6.3  (30/10/2026)
+  - Sửa lỗi bản exe sau khi bấm Cập nhật / Khôi phục: "Failed to execute script ... No such file or directory:
+    ...\Temp\_MEIxxxx\base_library.zip". Tool mở lại chính nó với môi trường sạch (không dùng chung thư mục
+    tạm của bản cũ); khi thay exe thì chờ cả 2 tiến trình của exe thoát hẳn rồi mới thay và mở lại.
+
 v6.2  (30/10/2026)
   - Bỏ giao diện web (điện thoại / iPhone / tiện ích Firefox) và tiện ích FshareAutoDownload_Firefox_v1.0:
     tool không còn mở cổng mạng, không cần cho phép qua tường lửa. Cài đặt mục 3 đổi thành "Tự động".
