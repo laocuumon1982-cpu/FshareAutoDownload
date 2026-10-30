@@ -1,0 +1,182 @@
+FSHARE AUTO DOWNLOAD v6.1 by Duy Anh - HƯỚNG DẪN
+(Có gì mới ở từng phiên bản: xem CHANGELOG.txt)
+=================================================
+
+Ý TƯỞNG CHÍNH
+   Tool giữ 1 "DANH SÁCH ĐÃ CÓ" (file owned.json) = những file bạn đã có, KHÔNG cần tải.
+   Khi quét, tool chỉ hiện & tải những file CHƯA có trong danh sách này.
+   File tải bằng tool (IDM đã nhận link) được TỰ ĐỘNG thêm vào danh sách -> lần sau không tải lại,
+   kể cả khi bạn đã chuyển file ra ổ cứng rời.
+
+CHUẨN BỊ
+   - Firefox: đăng nhập sẵn Fshare VIP + cài tiện ích "IDM Integration Module".
+   - Vào tài khoản Fshare, bật "Tải trực tiếp" (Direct download).
+
+CÀI ĐẶT / CẬP NHẬT
+   - Từ bản cũ: chép đè fshare_auto_idm.py. config.json / history.json giữ nguyên.
+     Lần đầu mở v4.0, các tập "Xong" trong lịch sử cũ được chuyển vào Danh sách đã có.
+   - Máy mới: cài Python, chạy "CaiDat.bat", rồi "ChayTool.bat". Muốn file .exe: "TaoFileExe.bat".
+
+BẢN PORTABLE (.exe) - CHẠY TỪ Ổ CỨNG DI ĐỘNG (v5.3)
+   Tạo 1 lần trên máy có Python: nhấp đúp "TaoFileExe.bat" -> đợi 1-3 phút.
+   Kết quả: thư mục "FshareAutoDownload_Portable" gồm FshareAutoDownload.exe + rclone.exe + dữ liệu đang dùng.
+   Chép CẢ thư mục đó vào ổ cứng di động -> chạy FshareAutoDownload.exe. Máy khác KHÔNG cần cài Python.
+   Mọi dữ liệu (config.json, owned.json, history.json, rclone.conf, log.txt) nằm trong thư mục Data\ cạnh exe.
+
+NHIỀU MÁY (Ở NHÀ / CHỖ LÀM) - HỒ SƠ THEO MÁY
+   Mỗi máy tự nhớ đường dẫn riêng: Firefox, thư mục IDM lưu phim, thư mục phim (HDD), rclone.exe,
+   thư mục gốc PikPak, cổng web... Cắm ổ vào máy nào, tool tự dùng đúng thiết lập của máy đó.
+   - Máy mới lần đầu: tool tự chép thiết lập từ máy dùng gần nhất, tự dò lại Firefox / IDM / rclone,
+     rồi hỏi có mở Cài đặt để kiểm tra không -> sửa đường dẫn cho đúng máy này -> "Lưu cài đặt".
+   - Đường dẫn nằm trên chính ổ di động được lưu không phụ thuộc ký tự ổ (ổ là E: ở nhà, F: ở chỗ làm vẫn đúng).
+   - Cài đặt -> "Máy này & Sao lưu": xem danh sách máy, chép thiết lập từ máy khác, xóa hồ sơ máy cũ.
+   - Danh sách thư mục Fshare, Danh sách đã có, lịch sử: DÙNG CHUNG cho mọi máy.
+
+SAO LƯU DỮ LIỆU LÊN PIKPAK (phòng ổ cứng hỏng)
+   - Sau mỗi lần tải xong, tool tự nén config.json + owned.json + history.json và đưa lên
+     PikPak:/<Thư mục gốc>/_Backup FshareAutoDownload/ (1 bản mới nhất + 1 bản theo từng ngày).
+   - Cài đặt -> "Máy này & Sao lưu": Sao lưu lên PikPak ngay / Khôi phục từ PikPak /
+     Sao lưu ra file / Khôi phục từ file. Khi khôi phục, dữ liệu cũ được giữ dạng *.bak, tool tự mở lại.
+   - Thanh bên trái (mục KẾT NỐI) hiện thời gian sao lưu gần nhất.
+
+TÀI KHOẢN PIKPAK - TỰ ĐĂNG NHẬP
+   - Cài đặt -> "Lưu trữ & PikPak" -> "Tài khoản PikPak..." -> nhập email / mật khẩu, tích "Ghi nhớ".
+   - Mỗi lần mở tool (cả trên máy khác) tool tự đăng nhập và kiểm tra kết nối. Trạng thái hiện ở
+     thanh bên trái, mục KẾT NỐI:  ✔ đã kết nối (xanh) / ⚠ lỗi (đỏ) / chưa đăng nhập. Bấm vào để mở cài đặt.
+   - Mật khẩu được mã hóa nhẹ trong config.json (không phải mã hóa mạnh) -> đừng chia sẻ file này.
+
+IPHONE KHÔNG MỞ ĐƯỢC WEB (v6.1): lần đầu mở tool sẽ hỏi "Cho phép iPhone / máy khác..." -> Có -> Windows hỏi
+   quyền Admin -> Yes. Tool xóa luật CHẶN cũ (do lỡ bấm Cancel ở hộp thoại Allow của Windows) và thêm luật cho phép.
+   Làm lại bất cứ lúc nào: Cài đặt -> Tự động & Web -> "Cho phép qua tường lửa Windows".
+
+TÙY CHỈNH GIAO DIỆN (v6.1): kéo mép phải thanh bên trái để đổi độ rộng (nhấp đúp = thu gọn); kéo vạch giữa
+   tiêu đề các cột (Thư mục, Ghi chú, Tên file, Ngày up, Dung lượng, Trạng thái) để đổi độ rộng cột.
+   Tool tự nhớ khi tắt.
+
+NÚT CẬP NHẬT (v6.0): nút "⟳ Cập nhật" góc trên bên phải.
+   - Cập nhật từ file zip: chọn file FshareAutoDownload_vX.Y.zip -> tool tự chép đè, GIỮ NGUYÊN thư mục Data,
+     bản cũ cất trong thư mục _BanCu, rồi tự khởi động lại. Dùng được cho cả bản exe portable.
+   - Cập nhật qua GitHub (tự báo khi có bản mới): xem HUONG_DAN_CAP_NHAT.txt.
+
+THƯ MỤC CON CÓ LINK (v6.0): thẻ thư mục ở tab Thư mục Fshare có mục "Thư mục con (N)" -> bấm để xem link
+   từng thư mục con. Bấm link: mở trên Firefox · chuột phải: copy link. Trên web / iPhone cũng có.
+
+THƯ MỤC DATA (v5.9) - LÊN BẢN MỚI:
+   Toàn bộ dữ liệu nằm trong thư mục "Data" cạnh tool: config.json (thư mục Fshare, cài đặt), owned.json
+   (Danh sách đã có), history.json (lịch sử tải), rclone.conf (đăng nhập PikPak), log.txt, file chẩn đoán.
+   Có bản mới: giải nén bản mới -> chép thư mục Data của bản cũ sang (ghi đè) -> chạy. Không thiếu dữ liệu.
+   Bản cũ (dữ liệu nằm cạnh tool) tự được chuyển vào Data ở lần mở đầu tiên.
+   Nút "Mở thư mục Data": Cài đặt -> Máy này & Sao lưu.
+
+CHẨN ĐOÁN THƯ MỤC (v5.8): nếu thấy thiếu tập, ở thẻ thư mục bấm "⋯" -> "Chẩn đoán". Tool ghi ra file
+   ChanDoan_<mã>.txt cạnh tool: mọi thư mục con, mọi file và lý do từng file bị bỏ qua / đã có.
+
+THƯ MỤC CON (v5.7):
+   Tool quét hết mọi thư mục con (tối đa 12 cấp). Tên file hiện kèm thư mục con: "Season 2  ›  Tap 01.mp4".
+   2 tập trùng tên ở 2 thư mục con khác nhau được tính là 2 file riêng (bản cũ coi là một -> bị thiếu).
+   File khác đuôi bị bỏ qua sẽ ghi trong nhật ký (VD: ".rmvb ×3") -> thêm đuôi trong Cài đặt -> Tải về.
+
+FIREFOX TỰ TẢI, IDM KHÔNG BẮT LINK (v5.6):
+   Firefox mới cập nhật nạp tiện ích IDM chậm hơn. Nếu Firefox đang tắt mà tool mở link ngay thì
+   Firefox tự tải vào Downloads. v5.6 mở trước 1 tab trống, chờ "Chờ Firefox khởi động" (mặc định 8s)
+   rồi mới mở link. Vẫn bị thì tăng lên 12-15 giây (Cài đặt -> Tải về).
+   Lỡ Firefox tự tải: tool nhận ra, không tải lại lần nữa, vẫn theo dõi Downloads để copy / upload.
+
+THANH BÊN TRÁI (v5.5): bấm « ở góc trên để thu gọn chỉ còn icon, bấm » để mở lại (phím tắt Ctrl+B).
+   Tool nhớ trạng thái thu gọn cho lần mở sau.
+
+CÀI ĐẶT (v5.3) chia 4 mục: Tải về · Lưu trữ & PikPak · Tự động & Web · Máy này & Sao lưu.
+
+BƯỚC 1 - TAB "THƯ MỤC FSHARE" (làm 1 lần cho mỗi thư mục)
+   Bên trái: danh sách thư mục. Bên phải: danh sách file của thư mục đang chọn.
+   1. "＋ Thêm thư mục" (dán link Fshare) hoặc "⧉ Dán nhiều link" (mỗi dòng 1 link,
+      có thể ghi:  Tên phim | https://www.fshare.vn/folder/XXXX).
+   2. Ở mỗi thư mục bấm nút "⌕ Quét file" -> bên phải hiện TẤT CẢ file của thư mục đó.
+   3. Tích chọn những file bạn ĐÃ CÓ:
+        - "Chọn tất cả" / "Bỏ chọn", bấm ô vuông từng file, hoặc
+        - bấm vào tập cuối cùng bạn đã có -> "↧ Chọn từ đầu đến dòng đang bấm".
+   4. Bấm "☑ Thêm vào Danh sách đã có"  (trạng thái hiện "Đã có (chưa lưu)").
+   5. Bấm "✓ Lưu".  -> thư mục được tính là "ĐÃ DUYỆT".
+      (Thư mục chưa có file nào: cứ bấm "Quét file" rồi "Lưu" để duyệt.)
+   6. Làm tương tự với thư mục tiếp theo.
+   - Muốn tải lại 1 file: tích file đó -> "↺ Bỏ khỏi Danh sách đã có" -> "✓ Lưu".
+   - Trạng thái trên mỗi thẻ thư mục:
+        ◔ Chưa duyệt (màu cam)  ·  ● N file mới chưa có (xanh dương)  ·  ✔ Đã có đủ (xanh lá)  ·  ⚠ Lỗi (đỏ)
+   - Ô vuông trên thẻ = có quét thư mục này hay không. "✎ Sửa": tên, link, ghi chú, bộ lọc, thư mục trên máy.
+   - Nút "⋯": mở thư mục trên Fshare, đưa lên / xuống, xóa.  Nút "⋯ Khác": chọn/bỏ quét tất cả, xuất/nhập danh sách.
+
+BƯỚC 2 - TAB "QUÉT & TẢI"
+   - "⌕ Quét": quét mọi thư mục đang bật, CHỈ HIỆN file chưa có trong Danh sách đã có.
+       ● Mới (tích sẵn)  ·  ⬇ Đã mở, chờ tải xong  ·  ↻ Thử lại (IDM chưa nhận lần trước)
+       ◔ Thư mục chưa duyệt (KHÔNG tích, KHÔNG tự tải - để tránh tải cả thư mục)
+   - "⬇ Tải mục đã chọn": tải các file đang tích.
+   - "☑ Đánh dấu đã có": đưa file đang tích vào Danh sách đã có mà không tải.
+   - "⬇ Quét & Tải": quét xong tải luôn các file mới.
+   - Bấm 1 dòng: tên đầy đủ hiện ở thanh trạng thái dưới cùng. Nhấp đúp: mở trên Firefox.
+   - Mỗi file: mở Firefox -> IDM tự bấm "Bắt đầu tải" -> file vào Danh sách đã có
+     -> ẩn cửa sổ IDM xuống khay -> đóng tab Fshare vừa mở -> quay lại tool.
+
+TỰ ĐỘNG (cuối thanh menu bên trái hoặc tab Cài đặt)
+   - "Tự quét mỗi N phút": tool tự quét & tải file mới (tool mở sẵn hoặc chạy dưới khay).
+   - Khởi động cùng Windows, thu nhỏ xuống khay, thông báo Windows: tab Cài đặt.
+   - Thư mục quét lỗi: thử lại 3 lần; đang tự quét thì quét lại sau 10 phút.
+   - IDM không nhận link: lần quét sau tự thử lại (tối đa 3 lần).
+
+UPLOAD LÊN PIKPAK (song song, tự động)
+   Tải xong -> COPY vào <Thư mục phim>\<Tên phim>\ trên máy (file gốc vẫn ở thư mục IDM) -> đồng thời upload lên
+   PikPak:/<Thư mục gốc>/<Tên phim>/  (giống cấu trúc trên máy).
+   Thiết lập 1 lần (tab Cài đặt -> mục "PikPak"):
+     1. rclone.exe (miễn phí, dùng để upload PikPak) LUÔN nằm cùng thư mục tool - không cần chọn đường dẫn.
+        Chưa có thì: Cài đặt -> Lưu trữ & PikPak -> "Tải rclone.exe về thư mục tool" (hoặc chạy CaiDat.bat).
+     2. Bấm "⚙ Đăng nhập PikPak..." -> nhập email / mật khẩu PikPak (chỉ 1 lần,
+        lưu mã hóa trong cấu hình rclone, tool không lưu mật khẩu).
+     3. "Thư mục gốc trên PikPak": gõ tên hoặc bấm "Chọn..." để duyệt / tạo thư mục trên PikPak.
+     4. Tích "Tải xong tự upload lên PikPak" -> "Lưu cài đặt".  Bấm "✓ Kiểm tra kết nối" để thử.
+   - Tên thư mục con = tên phim. Đổi riêng cho từng phim: nút "Sửa" của thư mục
+     -> "Thư mục con trên PikPak".
+   - Upload chạy nền, lần lượt từng file. Cột "PIKPAK" ở tab Lịch sử: Chờ upload / ↑ 45% / Đã lên PikPak / Lỗi.
+   - Upload lỗi hoặc file cũ: chọn ở tab Lịch sử -> "⇪ Upload lên PikPak". Tắt tool giữa chừng:
+     lần mở sau tự upload tiếp. Lọc "Lỗi upload" để xem file chưa lên được.
+
+GIAO DIỆN WEB - ĐIỀU KHIỂN TỪ ĐIỆN THOẠI (v5.0)
+   Tool vẫn chạy trên máy tính (Firefox, IDM, ổ cứng, PikPak như cũ), có thêm trang web để điều khiển.
+   Trên trang web: Quét / Quét & Tải / Dừng, bật tắt tự quét, chọn file để tải hoặc đánh dấu đã có,
+   thêm / sửa / xóa thư mục, "Quét file" từng thư mục và lưu Danh sách đã có, xem lịch sử, upload PikPak.
+   1. Tab Cài đặt -> "Giao diện web": bật (mặc định bật), cổng 8080, ĐẶT MÃ PIN -> Lưu cài đặt.
+   2. Lần đầu Windows hỏi tường lửa (Windows Firewall) -> chọn "Allow" cho mạng Private.
+   3. Điện thoại dùng CÙNG Wi-Fi với máy tính -> mở trình duyệt, gõ địa chỉ hiện ở
+      tab Cài đặt / cuối thanh bên trái (VD: http://192.168.1.5:8080) -> nhập mã PIN.
+   4. CÀI NHƯ APP TRÊN IPHONE: mở địa chỉ bằng Safari -> bấm nút Chia sẻ (ô vuông có mũi tên lên)
+      -> "Thêm vào MH chính" -> Thêm.  Biểu tượng "Fshare DL" xuất hiện trên màn hình chính,
+      mở ra toàn màn hình như app thật (thanh tab dưới đáy, tự theo chế độ Sáng / Tối của iPhone).
+      Kéo xuống ở đầu trang để làm mới. Android: Chrome -> menu ⋮ -> "Thêm vào màn hình chính".
+   Lưu ý: máy tính phải bật và tool đang chạy (có thể chạy ẩn dưới khay).
+   Nếu không vào được: kiểm tra cùng Wi-Fi, tường lửa, hoặc đổi cổng khác (VD 8088).
+
+   DÙNG KHI Ở NGOÀI NHÀ (không cùng Wi-Fi) - dùng Tailscale (miễn phí, an toàn):
+   1. Máy tính: tải Tailscale ở https://tailscale.com/download -> cài -> đăng nhập (Google/Microsoft...).
+   2. Điện thoại: cài app Tailscale (App Store / CH Play) -> đăng nhập CÙNG tài khoản -> bật kết nối.
+   3. Trong app Tailscale trên điện thoại, xem địa chỉ của máy tính (dạng 100.x.y.z).
+   4. Mở trình duyệt điện thoại: http://100.x.y.z:8080  (hoặc http://<tên-máy>:8080).
+   Không cần mở cổng modem, chỉ máy của bạn mới vào được.
+
+TIỆN ÍCH FIREFOX (v5.2)
+   Có tiện ích Firefox riêng (file FshareAutoDownload_Firefox_v1.0.zip, xem HUONG_DAN_TIEN_ICH.txt):
+   bấm biểu tượng trên thanh công cụ để xem file mới / quét / tải / đánh dấu đã có, số đỏ báo file mới,
+   thông báo khi có tập mới / tải xong, nút "Thêm vào Fshare Auto Download" ngay trên trang thư mục Fshare.
+   Cần bật "Giao diện web" trong tab Cài đặt của tool.
+
+TAB "LỊCH SỬ TẢI": nhật ký các file đã tải bằng tool (tìm, lọc, sắp xếp).
+   "Đánh dấu Xong" = coi như đã tải (cũng thêm vào Danh sách đã có).
+
+TAB "CÀI ĐẶT"
+   - Firefox: đường dẫn, thời gian chờ giữa 2 file, đuôi file cần tải,
+     sau khi IDM nhận link: Chỉ đóng tab Fshare (khuyên dùng) / Đóng hẳn Firefox / Không đóng.
+   - IDM: tự bấm Bắt đầu tải, cửa sổ tải (ẩn xuống khay / thu nhỏ / giữ nguyên),
+     thư mục IDM lưu phim (để biết file nào tải xong).
+   - Thư viện phim: tải xong tự COPY file vào <Thư mục phim>\<Tên phim>\ (file gốc vẫn giữ trong thư mục IDM).
+
+LƯU Ý
+   - Sao lưu 2 file quan trọng: owned.json (Danh sách đã có) và config.json (danh sách thư mục).
+   - Nếu IDM chạy bằng quyền Administrator thì tool cũng phải chạy bằng quyền Administrator.
+   - Phím tắt: Ctrl+1 Thư mục · Ctrl+2 Quét & Tải · Ctrl+3 Lịch sử · Ctrl+4 Cài đặt.

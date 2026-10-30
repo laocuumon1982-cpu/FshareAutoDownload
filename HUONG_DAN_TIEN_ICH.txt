@@ -1,0 +1,44 @@
+TIỆN ÍCH FIREFOX "FSHARE AUTO DOWNLOAD" v1.0 by Duy Anh
+=======================================================
+Tiện ích điều khiển tool Fshare Auto Download (bản v5.2 trở lên) đang chạy trên máy tính.
+Tool vẫn làm mọi việc (IDM, chuyển file vào thư mục phim, upload PikPak); tiện ích chỉ thay cho việc mở cửa sổ tool.
+
+CHUẨN BỊ
+  - Cập nhật tool lên v5.2 (chép đè fshare_auto_idm.py), mở tool.
+  - Tab Cài đặt của tool -> "Giao diện web": bật (mặc định bật). Nếu có đặt mã PIN thì nhớ mã PIN.
+
+CÀI TIỆN ÍCH - chọn 1 trong 3 cách
+  Cách 1 - Cài vĩnh viễn (khuyên dùng, miễn phí, làm 1 lần ~10 phút):
+     Firefox bản thường chỉ cho cài vĩnh viễn tiện ích đã được Mozilla ký. Tự ký như sau:
+     1. Vào https://addons.mozilla.org/developers/ -> đăng nhập / tạo tài khoản Firefox (miễn phí).
+     2. Bấm "Submit a New Add-on" -> chọn "On your own" (tự phân phối, không đăng công khai).
+     3. Tải lên file FshareAutoDownload_Firefox_v1.0.zip -> Continue (đồng ý các mục).
+     4. Đợi Mozilla kiểm tra tự động (thường vài phút) -> tải về file .xpi đã ký.
+     5. Kéo thả file .xpi vào cửa sổ Firefox -> "Thêm" (Add). Xong, tắt Firefox mở lại vẫn còn.
+  Cách 2 - Cài tạm để dùng thử (mất khi tắt Firefox):
+     1. Gõ vào thanh địa chỉ: about:debugging#/runtime/this-firefox
+     2. Bấm "Load Temporary Add-on..." (Tải tiện ích tạm thời) -> chọn file FshareAutoDownload_Firefox_v1.0.zip.
+  Cách 3 - Firefox Developer Edition / Nightly / ESR:
+     about:config -> xpinstall.signatures.required = false -> kéo thả file .zip (đổi đuôi thành .xpi) vào Firefox.
+
+THIẾT LẬP (1 lần)
+  Bấm biểu tượng tiện ích -> nút ⚙ (Cài đặt tiện ích):
+  - Địa chỉ tool: cùng máy tính để http://127.0.0.1:8080 (cổng đặt trong tool).
+    Firefox ở máy khác: dùng địa chỉ hiện ở cuối thanh bên trái của tool (VD http://192.168.1.5:8080)
+    hoặc địa chỉ Tailscale (http://100.x.y.z:8080).
+  - Mã PIN: giống mã PIN trong tool (để trống nếu tool chưa đặt PIN).
+  - Bấm "Lưu & kiểm tra" -> thấy "✔ Kết nối OK" là được.
+
+CÁCH DÙNG
+  - Bấm biểu tượng tiện ích trên thanh công cụ:
+      số file mới / đang tải / đã có / thư mục, nút Quét - Quét & Tải - Dừng, bật tắt tự quét,
+      danh sách file chưa có: chạm để chọn -> "⬇ Tải N file" hoặc "☑ Đã có".
+      Nút ⤢ mở trang đầy đủ (quản lý thư mục, "Quét file" để duyệt thư mục, lịch sử, PikPak).
+  - Số đỏ trên biểu tượng = số file mới chưa có (tự cập nhật mỗi phút).
+      "…" = tool đang quét/tải · "!" = chưa kết nối được tool · "PIN" = sai mã PIN.
+  - Thông báo Firefox khi có file mới và khi tải xong (tắt được trong Cài đặt tiện ích).
+  - THÊM THƯ MỤC NHANH: đang xem 1 thư mục trên fshare.vn ->
+      bấm nút xanh "Thêm vào Fshare Auto Download" ở góc dưới phải, hoặc
+      chuột phải -> "Thêm thư mục này vào Fshare Auto Download",
+      hoặc chuột phải lên 1 link thư mục Fshare -> "Thêm vào Fshare Auto Download".
+    Sau đó mở trang đầy đủ (⤢) -> Thư mục -> "Quét file" để chọn những file đã có rồi Lưu.

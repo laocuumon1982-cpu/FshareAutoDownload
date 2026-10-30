@@ -1,0 +1,161 @@
+FSHARE AUTO DOWNLOAD by Duy Anh - NHẬT KÝ PHIÊN BẢN
+==================================================
+
+v6.1  (30/10/2026)
+  - iPhone không vào được web: lần đầu mở tool hỏi cho phép như hộp thoại "Allow" của Windows; nút
+    "Cho phép qua tường lửa" giờ xóa luật CHẶN cũ (do lỡ bấm Cancel) và thêm luật cho phép theo chương trình + cổng.
+  - Kéo mép phải thanh bên trái để đổi độ rộng (vẫn có nút « thu gọn, nhấp đúp mép = thu gọn); nhớ khi tắt.
+  - Nhớ độ rộng các cột đã kéo ở tab Quét & Tải, Lịch sử, danh sách file của thư mục.
+
+v6.0  (30/10/2026)
+  - Nút "⟳ Cập nhật": cập nhật từ file zip hoặc tự kiểm tra bản mới trên GitHub (Releases); giữ nguyên Data,
+    cất bản cũ vào _BanCu, tự khởi động lại. Bản exe cũng cập nhật được (exe tự chạy code mới đặt cạnh nó).
+  - Kèm .github/workflows/release.yml: đẩy tag vX.Y lên GitHub là tự đóng gói exe portable.
+  - Tab Thư mục Fshare: hiện link từng thư mục con (bấm mở Firefox, chuột phải copy). Web/iPhone cũng có.
+  - Web: link "↗ Fshare" luôn là link đầy đủ; nút mở cổng tường lửa Windows; tự thử lại khi cổng web bận;
+    báo rõ khi không mở được cổng.
+
+v5.9  (30/10/2026)
+  - Thư mục Data: config.json, owned.json, history.json, rclone.conf, log.txt, file chẩn đoán đều nằm trong
+    Data\ cạnh tool. Lên bản mới chỉ cần chép thư mục Data của bản cũ sang.
+  - Lần đầu mở, dữ liệu kiểu cũ (nằm cạnh tool) tự chuyển vào Data (không ghi đè nếu Data đã có).
+  - Nút "Mở thư mục Data" trong Cài đặt -> Máy này & Sao lưu. Sao lưu / khôi phục dùng thư mục Data.
+  - TaoFileExe.bat chép thư mục Data sang bản portable.
+
+v5.8  (30/10/2026)
+  - Sửa lỗi sót tập trong thư mục con có hơn 50 file (VD: thư mục HQ của Jade Dynasty, tập S4E090):
+    Fshare không trả thông tin trang tiếp theo -> bản cũ chỉ đọc trang đầu. Nay đọc tới khi hết trang.
+  - Thư mục con đọc lỗi không làm hỏng cả thư mục: tool đi tiếp, thử lại, và ghi rõ thư mục con nào lỗi.
+  - Lấy mã thư mục / file từ link khi Fshare thiếu trường linkcode.
+  - Mới: "⋯ -> Chẩn đoán" xuất file ChanDoan_<mã>.txt liệt kê mọi file + lý do bị bỏ qua.
+  - rclone.exe luôn nằm cùng thư mục tool: bỏ ô chọn đường dẫn, thêm nút "Tải rclone.exe về thư mục tool";
+    CaiDat.bat cũng tải rclone.exe vào thư mục tool (không cài vào Windows nữa).
+
+v5.7  (30/10/2026)
+  - Sửa lỗi quét thiếu file trong thư mục con:
+    + 2 tập trùng tên ở 2 thư mục con (Season 1 / Season 2) trước bị coi là một -> tập sau bị ẩn. Nay tách riêng
+      (Danh sách đã có ghi nhớ cả thư mục con; so theo tên chỉ dùng khi Fshare up lại file với mã mới).
+    + Đọc đủ mọi trang của thư mục lớn (dựa cả số trang, không chỉ link 'next').
+    + Fshare báo bận (429/5xx) hay rớt mạng -> tự thử lại tới 5 lần thay vì bỏ dở.
+    + Hiện tên kèm thư mục con, xếp theo thư mục con; nhật ký báo số file bị bỏ qua do khác đuôi.
+  - Giao diện mới (Graphite & Teal): bỏ banner xanh, thanh tiêu đề trang gọn, logo + phiên bản lên thanh bên,
+    thông tin thanh bên chia thẻ (Thư viện / Tự động / Kết nối), thẻ thống kê mới, icon mới, web/iPhone đổi màu theo.
+
+v5.6  (28/10/2026)
+  - Sửa lỗi sau khi cập nhật Firefox: IDM không bắt link, Firefox tự tải vào Downloads.
+    Firefox đang tắt -> tool mở trước 1 tab trống, chờ tiện ích IDM nạp xong (mặc định 8s) mới mở link.
+  - Cài đặt mới: "Chờ Firefox khởi động (giây)".
+  - Nếu Firefox vẫn tự tải: tool nhận ra (file .part trong Downloads), không thử tải lại để tránh trùng,
+    đánh dấu Đang tải và thông báo.
+  - Tự theo dõi thư mục Downloads của Firefox (tắt được) để file Firefox tự tải vẫn được copy / upload PikPak.
+
+v5.5  (25/10/2026)
+  - Thanh bên trái rộng thêm 1/2 (285 -> 430), chữ trạng thái ít xuống dòng hơn.
+  - Nút « / » thu gọn thanh bên trái chỉ còn icon (Ctrl+B), nhớ trạng thái khi mở lại.
+  - Cửa sổ mặc định rộng hơn (tối đa 1480) cho vừa thanh bên mới.
+
+v5.4  (25/10/2026)
+  - Tải xong: tool COPY file vào thư mục riêng theo tên phim (không chuyển nữa),
+    file gốc vẫn còn trong thư mục IDM. Đã copy rồi (cùng tên, cùng dung lượng) thì bỏ qua.
+  - Copy an toàn: ghi ra file .part rồi mới đổi tên, không để lại file copy dở.
+  - Thanh bên trái rộng hơn (215 -> 285), chữ to hơn, thông tin PikPak / sao lưu / web dễ đọc.
+
+v5.3  (24/10/2026)
+  - Bản portable: TaoFileExe.bat đóng gói thành FshareAutoDownload.exe kèm rclone.exe và dữ liệu,
+    chạy thẳng từ ổ cứng di động, máy khác không cần cài Python.
+  - Hồ sơ theo máy: mỗi máy (nhà / chỗ làm) tự nhớ đường dẫn Firefox, thư mục IDM, thư mục phim,
+    rclone.exe, thư mục PikPak, cổng web; đường dẫn trên ổ di động không phụ thuộc ký tự ổ.
+    Máy mới tự chép thiết lập máy gần nhất + tự dò lại Firefox / IDM / rclone.
+  - Tự sao lưu config / owned / history lên PikPak sau mỗi lần tải xong; nút sao lưu / khôi phục
+    (PikPak hoặc file zip), khôi phục giữ bản cũ *.bak và tự mở lại tool.
+  - Nhớ tài khoản + mật khẩu PikPak (mã hóa nhẹ); mở tool tự đăng nhập, kiểm tra kết nối;
+    trạng thái PikPak + thời gian sao lưu hiện ở thanh bên trái (mục KẾT NỐI).
+  - rclone.conf lưu cùng thư mục tool (mang theo ổ di động); tự chuyển cấu hình rclone cũ sang.
+  - Cài đặt sắp xếp lại thành 4 mục: Tải về · Lưu trữ & PikPak · Tự động & Web · Máy này & Sao lưu.
+  - Dòng mô tả trên thanh tiêu đề: Fshare ➜ Firefox ➜ IDM ➜ HDD & PikPak.
+
+v5.2  (24/10/2026)
+  - Hỗ trợ tiện ích Firefox "Fshare Auto Download" v1.0 (gói riêng): tool nhận mã PIN qua header
+    và cho phép tiện ích trình duyệt kết nối.
+
+v5.1  (24/10/2026)
+  - Giao diện web thành "app" trên iPhone: Safari -> Chia sẻ -> Thêm vào MH chính.
+    Biểu tượng sắc nét, mở toàn màn hình, thanh tab dưới đáy kiểu iOS, tự theo chế độ Sáng / Tối,
+    kéo xuống để làm mới, nhớ tab đang mở, tự làm mới khi mở lại app.
+  - Nút to, dễ chạm; chạm cả dòng để chọn file; thanh "Đã có / Tải" chỉ hiện khi đang chọn file.
+  - Nhắc cách cài như app khi mở bằng Safari lần đầu.
+
+v5.0  (24/10/2026)
+  - Giao diện web điều khiển từ điện thoại / máy khác: tool vẫn chạy trên máy tính, mở
+    http://<IP máy>:8080 trên điện thoại (cùng Wi-Fi, hoặc ở ngoài nhà qua Tailscale).
+  - Web có: thống kê, Quét / Quét & Tải / Dừng, tự quét, chọn file tải / đánh dấu đã có,
+    quản lý thư mục, "Quét file" + lưu Danh sách đã có, lịch sử + upload PikPak, nhật ký.
+  - Bảo vệ bằng mã PIN; "Thêm vào màn hình chính" như 1 app.
+  - Cài đặt web trong tab Cài đặt; địa chỉ web hiện ở cuối thanh bên trái (bấm để mở).
+
+v4.1  (24/10/2026)
+  - Upload lên PikPak song song (qua rclone): tải xong -> chuyển vào thư mục phim trên máy
+    -> upload lên PikPak:/<Thư mục gốc>/<Tên phim>/.
+  - Cài đặt PikPak: đăng nhập 1 lần, chọn / tạo thư mục gốc trên PikPak, kiểm tra kết nối.
+  - Mỗi thư mục Fshare có thể đặt "Thư mục con trên PikPak" riêng.
+  - Tab Lịch sử: cột PIKPAK (tiến độ %), nút "Upload lên PikPak", lọc "Lỗi upload";
+    tự upload tiếp file còn dở khi mở lại tool.
+  - Tab Cài đặt cuộn được; CaiDat.bat tự cài rclone bằng winget.
+
+v4.0  (23/10/2026)  - VIẾT LẠI THEO Ý TƯỞNG MỚI
+  - "Danh sách đã có" (owned.json): tab Quét chỉ hiện & tải file CHƯA có trong danh sách,
+    không còn lọc theo ngày -> không sót tập, không tải lại file đã chuyển ra ổ cứng rời.
+  - File tải bằng tool tự vào Danh sách đã có ngay khi IDM nhận link.
+  - Tab Thư mục Fshare làm lại: thẻ thư mục (chữ tự xuống dòng, không bị cắt), mỗi thư mục có nút
+    "Quét file" riêng; bên phải hiện tất cả file -> chọn -> "Thêm vào Danh sách đã có" -> "Lưu".
+  - Thư mục chưa duyệt không bao giờ tự tải (tránh tải nguyên cả thư mục).
+  - Tab Quét: nút "Đánh dấu đã có"; bấm 1 dòng hiện tên đầy đủ ở thanh trạng thái.
+  - Dòng bảng tự cao theo cỡ chữ (không cắt chữ khi Windows phóng to 125-150%).
+  - Bỏ: lọc theo số ngày, quét bù, "Tìm tập còn thiếu" (không cần nữa).
+
+v3.3  (23/10/2026)
+  - Đổi cách đánh dấu: tab Thư mục Fshare -> chọn thư mục -> "Quét tất cả file" -> hiện danh sách
+    -> tích chọn file -> "☑ Đánh dấu file đã có" (hoặc "↺ Bỏ đánh dấu") -> "✓ Lưu".
+  - Trạng thái hiện rõ "Đã có (chưa lưu)" trước khi lưu; đóng cửa sổ khi chưa lưu sẽ được hỏi lại.
+  - File đang có trên máy được tự đánh dấu sẵn (bấm Lưu để ghi vào lịch sử).
+
+v3.2  (23/10/2026)
+  - Nút "Đánh dấu file đã có" ở tab Thư mục Fshare: xem toàn bộ file của 1 thư mục,
+    tích các tập đã có (tải thủ công / đã chuyển ra ổ cứng rời) rồi "Lưu vào lịch sử".
+    Khi quét, các tập đã đánh dấu hiện "✔ Đã đánh dấu có" và không bao giờ bị tải.
+  - Hộp thoại có: tích sẵn tập đã tải / có trên máy, "Tích từ đầu đến dòng đang chọn",
+    tìm kiếm, lọc, sắp xếp tên theo số tập (Tap 2 trước Tap 10). Bỏ tích = cho tải lại.
+
+v3.1  (23/10/2026)
+  Chống sót tập
+  - Quét bù: nếu máy tắt / tool không chạy vài ngày, lần quét sau tự lấy lại các tập
+    từ lần quét thành công gần nhất (tối đa 14 ngày) cho từng thư mục.
+  - Thư mục quét lỗi (mạng, Fshare bận) tự thử lại 3 lần; đang tự quét thì quét lại sau 10 phút.
+  - Tập mà IDM không nhận được ghi là "Lỗi" và tự thử lại ở lần quét sau (tối đa 3 lần).
+  - Tập "Đang tải" quá 12 giờ mà chưa thấy file -> tự cho tải lại.
+  - Nút "Tìm tập còn thiếu": quét mọi ngày, chỉ hiện các tập chưa có trên máy.
+  Dễ quản lý
+  - Thanh menu bên trái (Ctrl+1..4 chuyển trang), có số đếm: tập cần tải, thư mục lỗi, đang tải.
+  - Tab Thư mục: thêm/sửa trong hộp thoại riêng (nhấp đúp để sửa), ô tìm kiếm,
+    cột "Tập mới nhất" và "Tình trạng" (OK / lỗi / lâu chưa có tập mới), nút ▲▼ đổi thứ tự,
+    Xuất / Nhập danh sách (sao lưu sang máy khác).
+  - Tab Quét & Tải: ô tìm, lọc theo trạng thái, bấm tiêu đề cột để sắp xếp.
+  - Tab Lịch sử: ô tìm, lọc (Đang tải / Xong / Lỗi / Hôm nay), sắp xếp theo cột.
+  - Tóm tắt lần quét cuối hiện ở thanh bên.
+  Giao diện
+  - Bố cục mới với thanh bên tối màu; bỏ biểu tượng emoji dễ lỗi font trên Windows.
+
+v3.0
+  - Ghi chú cho từng thư mục, hiện ở bảng quét. Ô ghi chú nhiều dòng, dán an toàn (bỏ emoji).
+  - Menu chuột phải Cắt/Sao chép/Dán cho mọi ô; Ctrl+V dùng được với bộ gõ tiếng Việt.
+  - Ẩn cửa sổ tải của IDM xuống khay; quay lại tool giữ nguyên kích thước, nhớ vị trí cửa sổ.
+  - So sánh với thư mục phim trên máy khi quét: tập đã có hiện "Đã có" và bỏ qua khi tải.
+  - "Thư mục phim trên máy" riêng cho từng phim.
+
+v2.x
+  - Giao diện mới, icon; theo dõi tải xong; tích chọn tập / thư mục; tự quét theo giờ;
+    thông báo Windows; khay hệ thống; tự xếp vào thư mục phim; lọc từ khóa; khởi động cùng Windows;
+    chỉ đóng tab Fshare vừa mở.
+
+v1.x
+  - Quét thư mục Fshare, mở link trên Firefox, IDM tự bấm "Bắt đầu tải", nhớ tập đã tải.
