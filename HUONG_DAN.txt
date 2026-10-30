@@ -1,4 +1,4 @@
-FSHARE AUTO DOWNLOAD v6.3 by Duy Anh - HƯỚNG DẪN
+FSHARE AUTO DOWNLOAD v6.4 by Duy Anh - HƯỚNG DẪN
 (Có gì mới ở từng phiên bản: xem CHANGELOG.txt)
 =================================================
 
@@ -44,6 +44,16 @@ TÀI KHOẢN PIKPAK - TỰ ĐĂNG NHẬP
    - Mỗi lần mở tool (cả trên máy khác) tool tự đăng nhập và kiểm tra kết nối. Trạng thái hiện ở
      thanh bên trái, mục KẾT NỐI:  ✔ đã kết nối (xanh) / ⚠ lỗi (đỏ) / chưa đăng nhập. Bấm vào để mở cài đặt.
    - Mật khẩu được mã hóa nhẹ trong config.json (không phải mã hóa mạnh) -> đừng chia sẻ file này.
+
+KIỂM TRA & CẢNH BÁO (v6.4) - chạy im lặng, chỉ báo khi có vấn đề (Cài đặt -> Tự động):
+   - Trước khi tải: IDM đang chạy (tắt thì tool tự mở), Firefox còn đăng nhập Fshare, thư mục IDM / thư mục phim
+     (ổ HDD) còn, ổ còn trống trên 5GB. Có vấn đề: báo ở thanh bên trái (chữ đỏ, mục Kết nối) + thông báo Windows.
+     Tự quét vẫn tải tiếp; bấm tay thì tool hỏi "Vẫn tiếp tục tải?".
+   - Có thể thiếu tập: tool đọc số tập (S4E090, Tập 812, EP1123...) - thấy nhảy số (có 088, 090 mà không có 089)
+     thì báo trong thẻ thư mục (khung cam) + nhật ký. Bấm "Đã kiểm tra, bỏ qua" để ẩn.
+   - File tải về thiếu dung lượng so với Fshare (IDM tải dở / rớt mạng): đổi tên thành *.hong, bỏ khỏi Danh sách
+     đã có, lần quét sau tự tải lại.
+   - Thư mục X ngày (mặc định 7) không có tập mới: báo trong thẻ thư mục - có thể bên up đổi sang link khác.
 
 TÙY CHỈNH GIAO DIỆN (v6.1): kéo mép phải thanh bên trái để đổi độ rộng (nhấp đúp = thu gọn); kéo vạch giữa
    tiêu đề các cột (Thư mục, Ghi chú, Tên file, Ngày up, Dung lượng, Trạng thái) để đổi độ rộng cột.

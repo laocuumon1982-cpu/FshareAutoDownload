@@ -1,6 +1,14 @@
 FSHARE AUTO DOWNLOAD by Duy Anh - NHẬT KÝ PHIÊN BẢN
 ==================================================
 
+v6.4  (30/10/2026)
+  - Kiểm tra im lặng trước khi tải: IDM đang chạy (tự mở nếu tắt), Firefox còn đăng nhập Fshare, thư mục IDM /
+    thư mục phim (ổ HDD) còn, ổ còn trống. Chỉ báo khi có vấn đề (thanh bên + thông báo, tối đa 3 giờ/lần).
+  - Báo "có thể thiếu tập" khi số tập bị nhảy (đọc S4E090, Tập 812, EP1123...), theo từng thư mục con / mùa.
+  - File tải về nhỏ hơn dung lượng trên Fshare -> "Lỗi - file thiếu dung lượng": đổi tên *.hong, bỏ khỏi Danh
+    sách đã có, tự tải lại.
+  - Báo thư mục lâu không có tập mới (mặc định 7 ngày, chỉnh trong Cài đặt -> Tự động).
+
 v6.3  (30/10/2026)
   - Sửa lỗi bản exe sau khi bấm Cập nhật / Khôi phục: "Failed to execute script ... No such file or directory:
     ...\Temp\_MEIxxxx\base_library.zip". Tool mở lại chính nó với môi trường sạch (không dùng chung thư mục

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Fshare Auto Download v6.3 by Duy Anh
+Fshare Auto Download v6.4 by Duy Anh
 - Quét các thư mục Fshare, lấy tập cập nhật trong ngày (hoặc N ngày gần đây)
 - Mở link từng tập mới trên Firefox (đã đăng nhập Fshare VIP) -> IDM bắt link -> tự bấm "Bắt đầu tải"
 - Theo dõi thư mục lưu của IDM, tải xong thì chuyển trạng thái "Đang tải" -> "Xong"
@@ -40,7 +40,7 @@ except Exception:
     TRAY_OK = False
 
 APP_TITLE = "Fshare Auto Download"
-APP_VERSION = "v6.3 by Duy Anh"
+APP_VERSION = "v6.4 by Duy Anh"
 APP_NAME = f"{APP_TITLE} {APP_VERSION}"
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 DATA_DIR = BASE / "Data"                # v5.9: mọi dữ liệu nằm trong Data\ -> lên bản mới chỉ cần chép thư mục Data
@@ -90,6 +90,8 @@ STATUS_DONE = "Xong"
 STATUS_SKIP_DONE = "Đã tải xong trước đó"
 STATUS_HAVE = "Đã có trong thư mục phim"
 STATUS_FAIL = "Lỗi - IDM chưa nhận"
+STATUS_BAD = "Lỗi - file thiếu dung lượng"     # v6.4: tải xong nhưng file nhỏ hơn trên Fshare -> tải lại
+RETRY_STATUSES = (STATUS_FAIL, STATUS_BAD)
 MARKED = "Đánh dấu thủ công"   # sent_at của tập bạn tự đánh dấu là đã có
 MAX_TRIES = 3                 # tự thử lại tối đa 3 lần với tập lỗi
 STALE_HOURS = 12              # "Đang tải" quá 12 giờ mà chưa có file -> cho tải lại
@@ -202,6 +204,8 @@ DEFAULT_CONFIG = {
     "watch_folders": "",
     "ff_warmup": 8,
     "watch_ff_downloads": True,
+    "health_check": True,
+    "stale_days": 7,
     "days_back": 0,
     "extensions": ".mkv .mp4 .avi .ts .m4v .mov",
     "folders": [],
@@ -705,6 +709,149 @@ class FshareFolder:
         return d
 
 
+# ----------------------------------------------------------------- v6.4: số tập / thiếu tập
+_NOISE_RE = re.compile(r"(?i)\b(?:\d{3,4}p|[248]k|\d{1,2}\s*bit|[xh]\.?26[45]|hevc|avc|aac\d*|ddp?\d(?:\.\d)?|"
+                       r"\d(?:\.\d)?ch|web-?dl|bluray|vie|eng|v\d)\b")
+
+
+def episode_of(name):
+    """Đọc số tập trong tên file -> (khóa nhóm, mùa, tập) hoặc None.
+    VD 'Jade Dynasty 4K 10Bit HQ S4E090 TMPĐ_Giacobe Ngọc.mkv' -> ('jadedynasty...', 4, 90)."""
+    stem = os.path.splitext(str(name))[0]
+    m = re.search(r"(?i)\bS(\d{1,2})\s*[ ._-]?\s*E[Pp]?(\d{1,4})\b", stem)
+    if m:
+        season, ep, span = int(m.group(1)), int(m.group(2)), m.span()
+    else:
+        m = re.search(r"(?i)(?:\b(?:t[aậ]p|tap|ep(?:isode)?|e)\s*[ ._-]?\s*)(\d{1,4})\b", strip_accents(stem))
+        if m:
+            stem = strip_accents(stem)          # vị trí khớp tính trên chuỗi đã bỏ dấu
+            season, ep, span = 0, int(m.group(1)), m.span()
+        else:
+            clean = _NOISE_RE.sub(" ", stem)
+            nums = [x for x in re.finditer(r"(?<![\d.])(\d{1,4})(?![\d.])", clean)]
+            if not nums:
+                return None
+            x = nums[-1]
+            season, ep = 0, int(x.group(1))
+            if 1900 <= ep <= 2099:          # năm, không phải số tập
+                return None
+            key = name_key(_NOISE_RE.sub(" ", clean[:x.start()] + " " + clean[x.end():]))
+            return key, season, ep
+    rest = stem[:span[0]] + " " + stem[span[1]:]
+    return name_key(_NOISE_RE.sub(" ", rest)), season, ep
+
+
+def _ranges(nums):
+    out, start, prev = [], None, None
+    for n in nums:
+        if start is None:
+            start = prev = n
+        elif n == prev + 1:
+            prev = n
+        else:
+            out.append((start, prev))
+            start = prev = n
+    if start is not None:
+        out.append((start, prev))
+    return out
+
+
+def find_gaps(items, max_report=40):
+    """items: [(thư mục con, tên file)]. Trả về danh sách dòng 'có thể thiếu' (rỗng nếu đủ)."""
+    groups = {}
+    for sub, name in items:
+        e = episode_of(name)
+        if e:
+            groups.setdefault((sub, e[0], e[1]), set()).add(e[2])
+    lines = []
+    for (sub, _key, season), eps in sorted(groups.items(), key=lambda kv: (natural_key(kv[0][0]), kv[0][2])):
+        if len(eps) < 3:
+            continue
+        eps = sorted(eps)
+        missing = sorted(set(range(eps[0], eps[-1] + 1)) - set(eps))
+        if not missing or len(missing) > max(50, len(eps)):    # khoảng trống quá lớn -> không phải bộ liền
+            continue
+        w = max(2, len(str(eps[-1])))
+        txt = ", ".join((f"{a:0{w}d}" if a == b else f"{a:0{w}d}–{b:0{w}d}") for a, b in _ranges(missing)[:15])
+        where = (sub + " · " if sub else "") + (f"Mùa {season} · " if season else "")
+        lines.append(f"{where}tập {eps[0]}–{eps[-1]}: thiếu {txt}" + (" ..." if len(_ranges(missing)) > 15 else ""))
+        if len(lines) >= max_report:
+            break
+    return lines
+
+
+# ----------------------------------------------------------------- v6.4: kiểm tra trước khi tải
+def idm_running():
+    if os.name != "nt":
+        return True
+    try:
+        out = subprocess.run(["tasklist", "/FI", "IMAGENAME eq IDMan.exe", "/NH"], capture_output=True, text=True,
+                             creationflags=subprocess.CREATE_NO_WINDOW, timeout=15).stdout
+        return "idman.exe" in out.lower()
+    except Exception:
+        return True
+
+
+def idm_exe():
+    if os.name != "nt":
+        return ""
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\DownloadManager") as k:
+            v, _ = winreg.QueryValueEx(k, "ExePath")
+            if v and os.path.isfile(v):
+                return v
+    except OSError:
+        pass
+    for c in (r"C:\Program Files (x86)\Internet Download Manager\IDMan.exe",
+              r"C:\Program Files\Internet Download Manager\IDMan.exe"):
+        if os.path.isfile(c):
+            return c
+    return ""
+
+
+_COOKIE_JUNK = re.compile(r"^(_ga|_gid|_gat|_fbp|_fbc|__gads|__gpi|_gcl|__utm|_clck|_clsk|_hj|cf_|__cf|_tt|ajs_)", re.I)
+
+
+def firefox_fshare_login():
+    """True: Firefox có cookie đăng nhập Fshare còn hạn · False: không có · None: không đọc được (bỏ qua)."""
+    import sqlite3
+    import tempfile
+    root = os.path.join(os.environ.get("APPDATA", ""), "Mozilla", "Firefox", "Profiles")
+    if not os.path.isdir(root):
+        return None
+    dbs = [os.path.join(root, d, "cookies.sqlite") for d in os.listdir(root)]
+    dbs = sorted((d for d in dbs if os.path.isfile(d)), key=os.path.getmtime, reverse=True)
+    if not dbs:
+        return None
+    now = time.time()
+    seen_any = False
+    for db in dbs[:3]:
+        tmp = Path(tempfile.gettempdir()) / "fad_cookies.sqlite"
+        try:
+            shutil.copy2(db, tmp)
+            for ext in ("-wal", "-shm"):
+                if os.path.isfile(db + ext):
+                    shutil.copy2(db + ext, str(tmp) + ext)
+                elif os.path.isfile(str(tmp) + ext):
+                    os.remove(str(tmp) + ext)
+            con = sqlite3.connect(f"file:{tmp}?mode=ro", uri=True)
+            rows = con.execute("SELECT name, expiry FROM moz_cookies WHERE host LIKE '%fshare.vn'").fetchall()
+            con.close()
+        except Exception:
+            continue
+        seen_any = True
+        for name, exp in rows:
+            exp = float(exp or 0)
+            if exp > 1e11:
+                exp /= 1000
+            if _COOKIE_JUNK.match(name or "") or (exp and exp < now):
+                continue
+            if re.search(r"sess|token|auth|login|ident|remember|user|fshare|sid", name or "", re.I):
+                return True
+    return False if seen_any else None
+
+
 # ----------------------------------------------------------------- CẬP NHẬT
 def ver_tuple(v):
     """'v5.9 by Duy Anh' / 'v6.0' -> (5, 9) để so sánh phiên bản."""
@@ -1117,15 +1264,15 @@ class IdmClicker:
 
 # ----------------------------------------------------------------- Theo dõi tải xong
 def scan_completed(watch_folders, pending):
-    """pending: {code: (name, size)}. Trả về {code: đường dẫn file} cho những tập đã tải xong.
-    IDM tải vào thư mục tạm, xong mới chuyển file sang thư mục lưu -> file xuất hiện đủ dung lượng là xong."""
+    """pending: {code: (name, size)}. Trả về ({code: đường dẫn file tải xong}, {code: (đường dẫn, dung lượng, cần)}).
+    Phần 2 (v6.4): file đã nằm yên > 10 phút nhưng NHỎ HƠN dung lượng trên Fshare -> tải hỏng / tải dở."""
     if not pending:
-        return {}
+        return {}, {}
     want = {}
     for code, info in pending.items():
         name, size = info[0], info[1]
         want.setdefault(name_key(os.path.splitext(name)[0]), []).append((code, size, os.path.splitext(name)[1].lower()))
-    result = {}
+    result, short = {}, {}
     now = time.time()
     for root in watch_folders:
         if not os.path.isdir(root):
@@ -1134,6 +1281,7 @@ def scan_completed(watch_folders, pending):
         for cur, dirs, files in os.walk(root):
             if cur.count(os.sep) - base_depth >= 3:
                 dirs[:] = []
+            fset = set(files)
             for fn in files:
                 stem, ext = os.path.splitext(fn)
                 key = name_key(stem)
@@ -1156,7 +1304,13 @@ def scan_completed(watch_folders, pending):
                         size = 0
                     if (size and st.st_size >= size * 0.995) or (not size and now - st.st_mtime > 15):
                         result[code] = path
-    return result
+                        short.pop(code, None)
+                    elif size and now - st.st_mtime > 600 and (fn + ".part") not in fset:
+                        short.setdefault(code, (path, st.st_size, size))
+    for code in list(short):
+        if code in result:
+            short.pop(code)
+    return result, short
 
 
 # ----------------------------------------------------------------- GUI
@@ -1500,6 +1654,8 @@ class App(tk.Tk):
         self.side_bk = tk.Label(ck, text="", bg=C_SIDE_CARD, fg=C_SIDE_MUTED, font=(FONT, 9), anchor="w",
                                 justify="left", wraplength=W)
         self.side_bk.pack(fill="x")
+        self.side_health = tk.Label(ck, text="", bg=C_SIDE_CARD, fg="#fca5a5", font=(FONT, 9, "bold"), anchor="w",
+                                    justify="left", wraplength=W)
         if self.cfg.get("last_backup"):
             self.side_bk.config(text="⟲ Sao lưu: " + self.cfg["last_backup"])
         tk.Label(ck, text=f"⌂ Máy: {MACHINE}", bg=C_SIDE_CARD, fg=C_SIDE_MUTED, font=(FONT, 9),
@@ -1507,7 +1663,7 @@ class App(tk.Tk):
         self.side_foot = tk.Label(bottom, text="Kéo mép phải thanh này để đổi độ rộng  ·  Ctrl+B / bấm « để thu gọn",
                                   bg=C_SIDE, fg="#4b5561", font=(FONT, 8), anchor="w", justify="left", wraplength=W)
         self.side_foot.pack(fill="x", padx=2)
-        self._side_wraps = [self.side_owned, self.side_last, self.side_pk, self.side_bk, self.side_foot]
+        self._side_wraps = [self.side_owned, self.side_last, self.side_pk, self.side_bk, self.side_foot, self.side_health]
         # vạch kéo đổi độ rộng thanh bên
         grip = tk.Frame(parent, bg="#0a0d10", width=5, cursor="sb_h_double_arrow")
         grip.pack(side="left", fill="y")
@@ -1758,6 +1914,33 @@ class App(tk.Tk):
                            justify="left", wraplength=width)
             stl.pack(fill="x", pady=(6, 0))
             self._wrap_labels.append(stl)
+            gaps = f.get("gaps") or []
+            if gaps and f.get("enabled", True) and "|".join(gaps) != f.get("gap_ack"):
+                gb = tk.Frame(card, bg="#fff7ed", padx=8, pady=5)
+                gb.pack(fill="x", pady=(6, 0))
+                gl = tk.Label(gb, text="⚠  Có thể thiếu tập:\n" + "\n".join("   • " + x for x in gaps[:6])
+                              + (f"\n   ... và {len(gaps) - 6} chỗ khác" if len(gaps) > 6 else ""),
+                              bg="#fff7ed", fg=C_ORANGE, font=(FONT, 9, "bold"), anchor="w", justify="left",
+                              wraplength=width - 20)
+                gl.pack(fill="x")
+                self._wrap_labels.append(gl)
+                ack = tk.Label(gb, text="✓ Đã kiểm tra, bỏ qua cảnh báo này", bg="#fff7ed", fg=C_MUTED,
+                               font=(FONT, 8, "underline"), anchor="w", cursor="hand2")
+                ack.pack(fill="x", pady=(3, 0))
+                ack.bind("<Button-1>", lambda e, i=i: self._ack_gaps(i))
+            sd = int(self.cfg.get("stale_days", 7) or 0)
+            if sd and f.get("latest_up") and f.get("enabled", True) and f.get("reviewed"):
+                try:
+                    lu = dt.date.fromisoformat(f["latest_up"])
+                    days = (dt.date.today() - lu).days
+                except ValueError:
+                    days, lu = 0, None
+                if days >= sd:
+                    sl = tk.Label(card, text=f"⏳  {days} ngày chưa có tập mới (mới nhất up {lu:%d/%m/%Y}) - bên up có "
+                                             "chuyển sang thư mục khác không?", bg=C_CARD, fg=C_ORANGE, font=(FONT, 9),
+                                  anchor="w", justify="left", wraplength=width)
+                    sl.pack(fill="x", pady=(4, 0))
+                    self._wrap_labels.append(sl)
             r3 = tk.Frame(card, bg=C_CARD)
             r3.pack(fill="x", pady=(8, 0))
             ttk.Button(r3, text="⌕  Quét file", style="AccentSmall.TButton",
@@ -1968,6 +2151,16 @@ class App(tk.Tk):
                         continue
                     d = fs.item_date(it)
                     out.append((fc, name, it.get("size"), d))
+                okc = {o[0] for o in out}
+                gaps = find_gaps([(it.get("_sub", ""), it.get("name") or "") for it in files
+                                  if it.get("linkcode") in okc])
+                dates = [o[3] for o in out if o[3]]
+                ex = {"gaps": gaps}
+                if dates:
+                    ex["latest_up"] = max(dates).isoformat()
+                self.q.put(("call", lambda: self._set_folder_extra(code, ex), (), {}, threading.Event()))
+                for g_ in gaps:
+                    self.q.put(("log", f"[{f.get('name') or code}] ⚠ Có thể thiếu tập: {g_}"))
                 self.fp_skipped = skipped
                 self.fp_errors = list(fs.errors)
                 subdirs = list(fs.subdirs)
@@ -2016,6 +2209,20 @@ class App(tk.Tk):
                             if getattr(self, "fp_errors", None) else ""))
         self._update_folder_stats(i, len(order), n_own, error="")
         self._fp_refresh()
+
+    def _ack_gaps(self, i):
+        f = self.cfg["folders"][i]
+        f["gap_ack"] = "|".join(f.get("gaps") or [])
+        save_json(CONFIG_FILE, self.cfg)
+        self.refresh_folders()
+
+    def _set_folder_extra(self, code, extra):
+        for f in self.cfg["folders"]:
+            if get_code(f.get("url")) == code:
+                f.update(extra)
+                save_json(CONFIG_FILE, self.cfg)
+                self.refresh_folders()
+                break
 
     def _link_label(self, lbl, url, color):
         """Nhãn link: bấm mở trên Firefox, chuột phải copy link, rê chuột gạch chân."""
@@ -2385,7 +2592,9 @@ class App(tk.Tk):
 
     def _download_job(self, items):
         try:
-            self._download_items(json.loads(json.dumps(self.cfg)), items)
+            cfg = json.loads(json.dumps(self.cfg))
+            if self._health_check(cfg, auto=False):
+                self._download_items(cfg, items)
         except Exception as e:
             self.log(f"LỖI: {e}")
         finally:
@@ -2491,6 +2700,84 @@ class App(tk.Tk):
         except OSError:
             pass
 
+    def _health_check(self, cfg, auto):
+        """Kiểm tra IM LẶNG trước khi tải: IDM đang chạy, Firefox còn đăng nhập Fshare, ổ cứng / thư mục còn,
+        ổ còn chỗ trống. Chỉ báo khi có vấn đề. Trả về False nếu người dùng chọn không tải."""
+        if not cfg.get("health_check", True):
+            return True
+        probs = []
+        if cfg.get("idm_autoclick", True) and not idm_running():
+            exe = idm_exe()
+            if exe:
+                try:
+                    subprocess.Popen([exe, "/onboot"], creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+                                     env=clean_env())
+                    for _ in range(10):
+                        if self.stop_flag.wait(1) or idm_running():
+                            break
+                except OSError:
+                    pass
+            if idm_running():
+                self.log("✔ IDM chưa chạy - đã tự mở IDM.")
+            else:
+                probs.append("IDM chưa chạy (không tự mở được) - mở Internet Download Manager.")
+        login = firefox_fshare_login()
+        if login is False:
+            probs.append("Firefox chưa đăng nhập Fshare hoặc phiên đăng nhập đã hết hạn - mở Firefox đăng nhập lại "
+                         "tài khoản VIP.")
+        watch = [x.strip() for x in cfg.get("watch_folders", "").split(";") if x.strip()]
+        ok_watch = [w for w in watch if os.path.isdir(w)]
+        if watch and not ok_watch:
+            probs.append("Không thấy thư mục IDM lưu phim: " + "; ".join(watch) + " (ổ chưa cắm / đổi ký tự ổ?)")
+        lib = cfg.get("library_root", "")
+        if cfg.get("organize") and lib:
+            lib = from_portable(lib)
+            if not os.path.isdir(lib):
+                probs.append(f"Không thấy thư mục phim: {lib} (ổ HDD chưa cắm?) - tải được nhưng chưa copy vào thư mục phim.")
+            else:
+                ok_watch.append(lib)
+        seen_drive = set()
+        for d in ok_watch:
+            drv = os.path.splitdrive(os.path.abspath(d))[0] or d
+            if drv in seen_drive:
+                continue
+            seen_drive.add(drv)
+            try:
+                free = shutil.disk_usage(d).free
+                if free < 5 * 1024 ** 3:
+                    probs.append(f"Ổ {drv} chỉ còn trống {human_size(free)}.")
+            except OSError:
+                pass
+        self.q.put(("call", lambda: self._show_health(probs), (), {}, threading.Event()))
+        if not probs:
+            self.log("✔ Kiểm tra trước khi tải: OK")
+            return True
+        for p_ in probs:
+            self.log("⚠ Kiểm tra trước khi tải: " + p_)
+        sig = "|".join(probs)
+        last_sig, last_ts = getattr(self, "_health_last", ("", 0))
+        if sig != last_sig or time.time() - last_ts > 3 * 3600:
+            self._health_last = (sig, time.time())
+            self.q.put(("notify", "⚠ Kiểm tra trước khi tải", " · ".join(probs)[:240]))
+        if auto:
+            return True        # tự quét: vẫn thử tải (lỗi sẽ được thử lại ở lần sau)
+        try:
+            return self.call_ui(lambda: messagebox.askyesno(APP_NAME + " - Kiểm tra trước khi tải",
+                                                            "Phát hiện vấn đề:\n\n• " + "\n• ".join(probs) +
+                                                            "\n\nVẫn tiếp tục tải?"), timeout=600)
+        except Exception:
+            return True
+
+    def _show_health(self, probs):
+        try:
+            if probs:
+                self.side_health.config(text="⚠ " + "\n⚠ ".join(probs))
+                self.side_health.pack(fill="x", pady=(4, 0), before=self.side_pk)
+            else:
+                self.side_health.pack_forget()
+        except (AttributeError, tk.TclError):
+            pass
+
     def _scan_job(self, download, auto=False):
         cfg = json.loads(json.dumps(self.cfg))
         exts = {e.lower() if e.startswith(".") else "." + e.lower()
@@ -2543,16 +2830,23 @@ class App(tk.Tk):
                 idx = self.owned_index()
                 inc, exc = f.get("include", ""), f.get("exclude", "")
                 total = owned_n = new_n = 0
-                rows, skipped = [], {}
+                rows, skipped, allnames, latest = [], {}, [], None
                 for it in files:
                     name, fcode = it.get("name") or "", it.get("linkcode")
-                    if not fcode or not name or fcode in seen:
+                    if not fcode or not name:
                         continue
                     if exts and os.path.splitext(name)[1].lower() not in exts:
-                        e = os.path.splitext(name)[1].lower() or "(không đuôi)"
-                        skipped[e] = skipped.get(e, 0) + 1
+                        if fcode not in seen:
+                            e = os.path.splitext(name)[1].lower() or "(không đuôi)"
+                            skipped[e] = skipped.get(e, 0) + 1
                         continue
                     if (inc or exc) and not match_keywords(name, inc, exc):
+                        continue
+                    allnames.append((it.get("_sub", ""), name))
+                    d0 = fs.item_date(it)
+                    if d0 and (latest is None or d0 > latest):
+                        latest = d0
+                    if fcode in seen:
                         continue
                     seen.add(fcode)
                     total += 1
@@ -2576,7 +2870,7 @@ class App(tk.Tk):
                     elif st in WATCH_STATUSES and now_ts - float(h.get("ts", now_ts) or now_ts) < STALE_HOURS * 3600:
                         stats["dl"] += 1
                         put("⬇  Đã mở, chờ tải xong", "dl")
-                    elif st == STATUS_FAIL:
+                    elif st in RETRY_STATUSES:
                         tries = int(h.get("tries", 1) or 1)
                         if tries < MAX_TRIES:
                             stats["retry"] += 1
@@ -2588,8 +2882,25 @@ class App(tk.Tk):
                     else:
                         put("●  Mới", "new")
                         new_items.append(item)
-                self.q.put(("folderstat", orig_i, {"last_scan": time.time(), "last_error": "", "subs": list(fs.subdirs),
-                                                   "total": total, "owned": owned_n}))
+                gaps = find_gaps(allnames)
+                gsig = "|".join(gaps)
+                extra = {"gaps": gaps, "latest_up": latest.isoformat() if latest else f.get("latest_up", "")}
+                if gaps and gsig != f.get("gap_ack") and gsig != f.get("gap_notified"):
+                    stats.setdefault("gaps", []).append((fname, gaps))
+                    extra["gap_notified"] = gsig
+                    for g_ in gaps:
+                        self.log(f"[{fname}] ⚠ Có thể thiếu tập: {g_}")
+                sd = int(cfg.get("stale_days", 7) or 0)
+                if sd and latest and reviewed:
+                    days = (dt.date.today() - latest).days
+                    if days >= sd and f.get("stale_notified") != dt.date.today().isoformat():
+                        stats.setdefault("stale", []).append((fname, days))
+                        extra["stale_notified"] = dt.date.today().isoformat()
+                        self.log(f"[{fname}] ⏳ {days} ngày chưa có tập mới (tập mới nhất up {latest:%d/%m/%Y}) - "
+                                 "kiểm tra xem bên up có chuyển sang thư mục khác không.")
+                self.q.put(("folderstat", orig_i, dict({"last_scan": time.time(), "last_error": "",
+                                                        "subs": list(fs.subdirs), "total": total, "owned": owned_n},
+                                                       **extra)))
                 n_sub = len({it.get("_sub") for it in files if it.get("_sub")})
                 if skipped:
                     self.log(f"[{fname}] Bỏ qua {sum(skipped.values())} file khác đuôi: "
@@ -2612,8 +2923,17 @@ class App(tk.Tk):
                 if auto:
                     self.q.put(("retry_soon", 600))
                 self.q.put(("notify", f"{len(failed)} thư mục quét lỗi", ", ".join(failed[:3])))
+            if stats.get("gaps"):
+                self.q.put(("notify", f"⚠ {len(stats['gaps'])} thư mục có thể thiếu tập",
+                            "; ".join(f"{n_}: {g_[0]}" for n_, g_ in stats["gaps"][:3])))
+            if stats.get("stale"):
+                self.q.put(("notify", f"⏳ {len(stats['stale'])} thư mục lâu không có tập mới",
+                            ", ".join(f"{n_} ({d_} ngày)" for n_, d_ in stats["stale"][:4])))
             if download and new_items and not self.stop_flag.is_set():
-                self._download_items(cfg, new_items, auto=auto)
+                if self._health_check(cfg, auto):
+                    self._download_items(cfg, new_items, auto=auto)
+                else:
+                    self.log("Đã hủy tải (kiểm tra trước khi tải chưa đạt). Danh sách file mới vẫn ở bảng.")
             elif new_items and not download:
                 self.q.put(("notify", f"Có {len(new_items)} file mới", self._names_preview([x[2] for x in new_items])))
         except Exception as e:
@@ -2742,7 +3062,7 @@ class App(tk.Tk):
         if self.monitor_busy:
             return
         pending = {c: (h.get("name", ""), h.get("size"), h.get("folder", "")) for c, h in self.history.items()
-                   if h.get("status") in WATCH_STATUSES + (STATUS_FAIL,)}
+                   if h.get("status") in WATCH_STATUSES + RETRY_STATUSES}
         if not pending:
             if manual:
                 self.status_var.set("Không có tập nào đang tải.")
@@ -2759,7 +3079,7 @@ class App(tk.Tk):
 
         def job():
             try:
-                res = scan_completed(folders, pending)
+                res, short = scan_completed(folders, pending)
                 if res and organize:
                     for code, path in list(res.items()):
                         fname = pending[code][2] or "Khác"
@@ -2772,6 +3092,8 @@ class App(tk.Tk):
                         except Exception as e:
                             self.q.put(("log", f"Không copy được {os.path.basename(path)}: {e}"))
                 self.q.put(("completed", res, manual, len(pending)))
+                if short:
+                    self.q.put(("shortfiles", short))
             except Exception as e:
                 self.q.put(("log", f"Lỗi kiểm tra tải xong: {e}"))
             finally:
@@ -2886,6 +3208,29 @@ class App(tk.Tk):
                         self.schedule_backup()
                     if manual:
                         self.status_var.set(f"Đã kiểm tra: {len(res)}/{total} tập tải xong.")
+                elif kind == "shortfiles":
+                    bad = []
+                    for code, (path, got, need) in msg[1].items():
+                        h = self.history.get(code)
+                        if not h or h.get("status") not in WATCH_STATUSES + (STATUS_FAIL,):
+                            continue
+                        try:                     # đổi tên file hỏng để không bị nhận nhầm là đã xong
+                            os.replace(path, path + ".hong")
+                        except OSError:
+                            pass
+                        tries = int(h.get("tries", 0) or 0) + 1
+                        h.update(status=STATUS_BAD, tries=tries, bad_info=f"{human_size(got)} / {human_size(need)}")
+                        self.remove_owned(code, h.get("folder_code", ""), h.get("name", ""))
+                        owned_changed = hist_changed = True
+                        self._set_row(code, f"⚠  File thiếu dung lượng ({human_size(got)}/{human_size(need)}) - sẽ tải lại",
+                                      "err")
+                        self.q.put(("log", f"⚠ [{h.get('name', '')}] File tải về thiếu dung lượng "
+                                           f"({human_size(got)} / {human_size(need)}) → đã đổi tên thành *.hong, bỏ khỏi "
+                                           "Danh sách đã có, lần quét sau tự tải lại."))
+                        bad.append(h.get("name", ""))
+                    if bad:
+                        self.notify(f"⚠ {len(bad)} file tải về bị thiếu dung lượng",
+                                    self._names_preview(bad) + " - sẽ tự tải lại")
                 elif kind == "foldername":
                     i, name = msg[1], msg[2]
                     if i < len(self.cfg["folders"]) and not self.cfg["folders"][i].get("name"):
@@ -3403,6 +3748,8 @@ class App(tk.Tk):
         self.startwin_var = tk.BooleanVar(value=bool(self.cfg.get("start_with_windows", False)))
         self.startscan_var = tk.BooleanVar(value=bool(self.cfg.get("startup_scan", True)))
         self.organize_var = tk.BooleanVar(value=bool(self.cfg.get("organize", False)))
+        self.health_var = tk.BooleanVar(value=bool(self.cfg.get("health_check", True)))
+        self.stale_var = tk.IntVar(value=int(self.cfg.get("stale_days", 7) or 0))
         self.lib_var = tk.StringVar(value=self.cfg.get("library_root", ""))
         self.pk_on_var = tk.BooleanVar(value=bool(self.cfg.get("pikpak_on", False)))
         self.pk_root_var = tk.StringVar(value=self.cfg.get("pikpak_root", ""))
@@ -3541,6 +3888,12 @@ class App(tk.Tk):
         tray_state = "normal" if TRAY_OK else "disabled"
         g.check("Bấm X thì thu nhỏ xuống khay hệ thống (góc đồng hồ)", self.tray_var, tray_state)
         g.check("Thông báo Windows khi có file mới / tải xong / upload xong", self.notify_var, tray_state)
+        g.section("Kiểm tra & cảnh báo", "Chạy im lặng, chỉ báo khi có vấn đề.")
+        g.check("Kiểm tra trước khi tải: IDM đang chạy (tự mở nếu tắt), Firefox còn đăng nhập Fshare, "
+                "ổ cứng / thư mục còn, ổ còn chỗ trống", self.health_var)
+        g.spin("Nhắc khi thư mục không có tập mới sau (ngày, 0 = tắt)", self.stale_var, 0, 90)
+        g.hint("Tự báo \"có thể thiếu tập\" khi số tập bị nhảy (VD có 088, 090 mà không có 089) và báo file tải về "
+               "bị thiếu dung lượng (tự tải lại).")
 
         # ----- 4. Máy này & Sao lưu
         g = G(self._set_pages["machine"])
@@ -4352,6 +4705,11 @@ class App(tk.Tk):
                 except OSError as e:
                     self.log(f"Không đặt được khởi động cùng Windows: {e}")
             self.cfg["watch_ff_downloads"] = self.ffdl_var.get()
+            self.cfg["health_check"] = self.health_var.get()
+            try:
+                self.cfg["stale_days"] = max(0, int(self.stale_var.get()))
+            except (tk.TclError, ValueError):
+                self.cfg["stale_days"] = 7
             for key, var, lo, dflt in (("delay", self.delay_var, 1, 4), ("idm_timeout", self.idm_to_var, 5, 25),
                                        ("ff_warmup", self.ff_warm_var, 0, 8)):
                 try:
@@ -4408,7 +4766,7 @@ class App(tk.Tk):
     def _status_tag(status):
         if status == STATUS_DONE:
             return "done"
-        if status == STATUS_FAIL:
+        if status in RETRY_STATUSES:
             return "err"
         if status in WATCH_STATUSES:
             return "dl"
