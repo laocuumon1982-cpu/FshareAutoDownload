@@ -8,16 +8,15 @@ CÁCH 1 - CẬP NHẬT TỪ FILE ZIP (không cần cài gì)
   Bản exe portable: cũng làm như trên. Tool đặt fshare_auto_idm.py mới cạnh exe và exe sẽ tự chạy code mới
   (không cần chạy lại TaoFileExe.bat, trừ khi bản mới cần thêm thư viện).
 
-CÁCH 2 - TỰ BÁO VÀ TỰ CẬP NHẬT QUA GITHUB (làm 1 lần)
-  1. Vào github.com (tài khoản laocuumon1982-cpu) -> New repository -> tên: FshareAutoDownload
-     -> chọn Public (tool đọc bản phát hành không cần đăng nhập) -> Create.
-     (Repo Private thì tool không đọc được bản phát hành.)
-  2. Đưa toàn bộ thư mục tool lên repo, KỂ CẢ thư mục .github (chứa file tự đóng gói exe).
-     KHÔNG đưa thư mục Data, rclone.exe, thư mục _BanCu lên (file .gitignore đã loại sẵn).
-  3. Mỗi khi có bản mới: tạo Release với tag đúng số phiên bản (VD v6.1).
-     GitHub tự đóng gói 2 file: FshareAutoDownload_Portable.zip (bản exe) và FshareAutoDownload_v6.1.zip.
-  4. Tool mở lên tự kiểm tra (sau ~15 giây). Có bản mới thì nút đổi thành "⟳ Có bản v6.1" -> bấm -> Có.
-  Đổi nguồn cập nhật: bấm "⟳ Cập nhật" khi đang là bản mới nhất -> ô "Nguồn cập nhật".
+CÁCH 2 - TỰ BÁO VÀ TỰ CẬP NHẬT QUA GITHUB (đã thiết lập sẵn)
+  Repo: https://github.com/laocuumon1982-cpu/FshareAutoDownload  (Public)
+  - Mỗi bản mới được đưa lên repo, GitHub Actions tự đóng gói và tạo Release (tag vX.Y) gồm:
+      FshareAutoDownload_Portable.zip  (bản exe, không cần Python)
+      FshareAutoDownload_vX.Y.zip      (bản chạy bằng Python)
+  - Tool mở lên tự kiểm tra (sau ~15 giây). Có bản mới thì nút đổi thành "⟳ Có bản vX.Y" -> bấm -> Có.
+  - Tải tay: vào mục Releases của repo.
+  - Đổi nguồn cập nhật: bấm "⟳ Cập nhật" khi đang là bản mới nhất -> ô "Nguồn cập nhật".
+  - Thư mục Data, rclone.exe, _BanCu không bao giờ được đưa lên GitHub (.gitignore).
 
 LƯU Ý
   - Thư mục Data (config.json, owned.json, history.json, rclone.conf) không bao giờ bị ghi đè khi cập nhật.
